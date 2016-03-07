@@ -18,10 +18,13 @@ public final class Main
 	public static final Random	RANDOM = new Random();
 
 	// State (internal) variables
-	private int				k = 0;		// Just an animation counter
+	private int			k = 0;			// Just an animation counter
+	private InputHandler		input;
+	private long			lastTime;		//For determining elapsed time
+	private GLJPanel		panel;
 
-	private int				w;			// Canvas width
-	private int				h;			// Canvas height
+	//Player vars
+	private double			x, y, z;		// Position
 
 	//**********************************************************************
 	// Main
@@ -46,11 +49,22 @@ public final class Main
 				}
 			});
 
-		panel.addGLEventListener(new Main());
+		panel.addGLEventListener(new Main(panel));
 
-		FPSAnimator		animator = new FPSAnimator(panel, 60);
+		FPSAnimator animator = new FPSAnimator(panel, 60);
 
 		animator.start();
+	}
+
+	public Main(GLJPanel p) {
+		lastTime = System.nanoTime();
+
+		panel = p;
+		input = new InputHandler();
+		input.frameX = p.getLocationOnScreen().x;
+		input.frameY = p.getLocationOnScreen().y;
+		p.addKeyListener(input);
+		p.addMouseMotionListener(input);
 	}
 
 	//**********************************************************************
@@ -59,8 +73,8 @@ public final class Main
 
 	public void		init(GLAutoDrawable drawable)
 	{
-		w = drawable.getWidth();
-		h = drawable.getHeight();
+		input.w = drawable.getWidth();
+		input.h = drawable.getHeight();
 		GL2 gl = drawable.getGL().getGL2();
 		//We're affecting the projection matrix
 		//(The one that turns world coordinates into screen coordinates)
@@ -72,7 +86,7 @@ public final class Main
 		//Nearest visible depth is 0.05, farthest visible depth is 10.
 		//Note that you get slightly better occlusion accuracy (I'm pretty sure)
 		//The lower the ratio zFar/zNear is. Also zNear can't be 0.
-		GLU.gluPerspective(45, 1, 0.05, 10);
+		GLU.gluPerspective(45, 1, 0.1, 20);
 	}
 
 	public void		dispose(GLAutoDrawable drawable)
@@ -81,16 +95,30 @@ public final class Main
 
 	public void		display(GLAutoDrawable drawable)
 	{
+		long time = System.nanoTime();
+		tick((int)(time-lastTime));
+		lastTime = time;
+
 		GL2		gl = drawable.getGL().getGL2();
 
-		gl.glClear(GL.GL_COLOR_BUFFER_BIT);		// Clear the buffer
-		drawSomething(gl);						// Draw something
+		gl.glMatrixMode(gl.GL_MODELVIEW);
+		gl.glLoadIdentity();
+		double cosP = Math.cos(input.pitch);
+		double sinP = Math.sin(input.pitch);
+		double cosY = Math.cos(input.yaw);
+		double sinY = Math.sin(input.yaw);
+		GLU.gluLookAt(x, y, z, x + cosP*sinY, y + sinP, z + cosP*cosY, -sinP*sinY, cosP, -sinP*cosY);
+
+		gl.glClear(GL.GL_COLOR_BUFFER_BIT);
+		drawSomething(gl);
 	}
 
 	public void		reshape(GLAutoDrawable drawable, int x, int y, int w, int h)
 	{
-		this.w = w;
-		this.h = h;
+		input.frameX = panel.getLocationOnScreen().x;
+		input.frameY = panel.getLocationOnScreen().y;
+		input.w = w;
+		input.h = h;
 	}
 
 	//**********************************************************************
@@ -106,16 +134,26 @@ public final class Main
 
 		//White triangle up
 		gl.glColor3f(1.0f, 1.0f, 1.0f);
-		gl.glVertex3d(1, 0, -3);
-		gl.glVertex3d(-1, 0, -3);
-		gl.glVertex3d(0, 1, -3);
+		gl.glVertex3d(1, 0, 3);
+		gl.glVertex3d(-1, 0, 3);
+		gl.glVertex3d(0, 1, 3);
 		//Red triangle down
 		gl.glColor3f(1.0f, 0, 0);
-		gl.glVertex3d(1, 0, -3);
-		gl.glVertex3d(-1, 0, -3);
-		gl.glVertex3d(0, -1, -3);
+		gl.glVertex3d(1, 0, 3);
+		gl.glVertex3d(-1, 0, 3);
+		gl.glVertex3d(0, -1, 3);
 
 		gl.glEnd();
+	}
+
+	//Does the actions that need to happen once per tick
+	private void tick(int nanos) {
+		double mvmnt = nanos/(double)1e9;
+		double cosY = mvmnt*Math.cos(input.yaw);
+		double sinY = mvmnt*Math.sin(input.yaw);
+		z += cosY*input.getVec(0)-sinY*input.getVec(1);
+		x += cosY*input.getVec(1)+sinY*input.getVec(0);
+		y += mvmnt * input.getVec(2);
 	}
 
 	// This example on this page is long but helpful:
@@ -128,5 +166,3 @@ public final class Main
 		renderer.endRendering();
 	}*/
 }
-
-//******************************************************************************
