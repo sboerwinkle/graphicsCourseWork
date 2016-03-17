@@ -2,6 +2,7 @@
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
+import java.nio.FloatBuffer;
 import java.util.Random;
 import javax.swing.*;
 import javax.media.opengl.*;
@@ -71,22 +72,72 @@ public final class Main
 	// Override Methods (GLEventListener)
 	//**********************************************************************
 
+	float perspectiveMatrix[];
+	int MvpLocation;
+	int vbo, prgId;
+
 	public void		init(GLAutoDrawable drawable)
 	{
 		input.w = drawable.getWidth();
 		input.h = drawable.getHeight();
 		GL2 gl = drawable.getGL().getGL2();
-		//We're affecting the projection matrix
-		//(The one that turns world coordinates into screen coordinates)
-		gl.glMatrixMode(gl.GL_PROJECTION);
-		//Load identity, because...
-		gl.glLoadIdentity();
-		//This actully multiplies the existing matrix by something.
-		//45 degree FOV, aspect ratio 1,
-		//Nearest visible depth is 0.05, farthest visible depth is 10.
-		//Note that you get slightly better occlusion accuracy (I'm pretty sure)
-		//The lower the ratio zFar/zNear is. Also zNear can't be 0.
-		GLU.gluPerspective(45, 1, 0.1, 20);
+
+		perspectiveMatrix = Matrix.perspective(45, 1, 0.1f, 20);
+		String vertexProgram =
+"#version 130\n" +
+"in vec3 pos;" +
+"in vec3 Color;" +
+"out vec3 color;" +
+"uniform mat4 MVP;" +
+"void main(){" +
+	"gl_Position = MVP*vec4(pos.xyz, 1);" +
+	"color = Color;" +
+"}";
+		String fragmentProgram = 
+"#version 130\n" +
+"in vec3 color;" +
+"out vec4 outColor;" +
+"void main(){" +
+	"outColor = vec4(color, 1);" +
+"}";
+		int vertexPrgId = gl.glCreateShader(gl.GL_VERTEX_SHADER);
+		gl.glShaderSource(vertexPrgId, 1, new String[] {vertexProgram}, null, 0);
+		gl.glCompileShader(vertexPrgId);
+
+		int fragmentPrgId = gl.glCreateShader(gl.GL_FRAGMENT_SHADER);
+		gl.glShaderSource(fragmentPrgId, 1, new String[] {fragmentProgram}, null, 0);
+		gl.glCompileShader(fragmentPrgId);
+
+		prgId = gl.glCreateProgram();
+		System.out.println("Got program " + prgId);
+		gl.glAttachShader(prgId, vertexPrgId);
+		gl.glAttachShader(prgId, fragmentPrgId);
+		gl.glLinkProgram(prgId);
+		gl.glUseProgram(prgId);
+
+		int[] status = new int[1];
+		gl.glGetShaderiv(vertexPrgId, gl.GL_COMPILE_STATUS, status, 0);
+		if (status[0] != gl.GL_TRUE) {
+			System.out.println("Vertex Shader failed compilation:");
+			byte[] buffer = new byte[512];
+			gl.glGetShaderInfoLog(vertexPrgId, 512, null, 0, buffer, 0);
+			System.out.println(buffer);
+		}
+
+		gl.glGetShaderiv(fragmentPrgId, gl.GL_COMPILE_STATUS, status, 0);
+		if (status[0] != gl.GL_TRUE) {
+			System.out.println("Fragment Shader failed compilation:");
+			byte[] buffer = new byte[512];
+			gl.glGetShaderInfoLog(fragmentPrgId, 512, null, 0, buffer, 0);
+			System.out.println(buffer);
+		}
+		gl.glBindAttribLocation(prgId, 0, "pos");
+		gl.glBindAttribLocation(prgId, 1, "Color");
+		MvpLocation = gl.glGetUniformLocation(prgId, "MVP");
+
+		int[] array = new int[1];
+		gl.glGenBuffers(1, array, 0);
+		vbo = array[0];
 	}
 
 	public void		dispose(GLAutoDrawable drawable)
@@ -101,13 +152,17 @@ public final class Main
 
 		GL2		gl = drawable.getGL().getGL2();
 
-		gl.glMatrixMode(gl.GL_MODELVIEW);
-		gl.glLoadIdentity();
-		double cosP = Math.cos(input.pitch);
-		double sinP = Math.sin(input.pitch);
-		double cosY = Math.cos(input.yaw);
-		double sinY = Math.sin(input.yaw);
-		GLU.gluLookAt(x, y, z, x + cosP*sinY, y + sinP, z + cosP*cosY, -sinP*sinY, cosP, -sinP*cosY);
+		//gl.glMatrixMode(gl.GL_MODELVIEW);
+		//gl.glLoadIdentity();
+		//input.pitch = input.yaw = 0;
+		float[] m = Matrix.multiply(Matrix.lookDir(x, y, z, input.pitch, input.yaw), perspectiveMatrix);
+		gl.glUseProgram(prgId);
+		gl.glUniformMatrix4fv(MvpLocation, 1, false, m, 0);
+		/*gl.glUniformMatrix4fv(MvpLocation, 1, false, new float[] {
+			1,0,0,0,
+			0,1,0,0,
+			0,0,0,0,
+			0,0,0,1}, 0);*/
 
 		gl.glClear(GL.GL_COLOR_BUFFER_BIT);
 		drawSomething(gl);
@@ -129,21 +184,38 @@ public final class Main
 	// http://www.linuxfocus.org/English/January1998/article17.html
 	private void	drawSomething(GL2 gl)
 	{
-		gl.glBegin(GL.GL_TRIANGLES);
-		//Note that our perspective is looking down the negative z axis by default.
+		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, vbo);
+		gl.glVertexAttribPointer(0, 3, GL.GL_FLOAT, false, 24, 0);
+		gl.glVertexAttribPointer(1, 3, GL.GL_FLOAT, false, 24, 12);
+		gl.glEnableVertexAttribArray(0);
+		gl.glEnableVertexAttribArray(1);
 
+
+		/*int[] results = new int[1];
+		gl.glGetIntegerv(gl.GL_CURRENT_PROGRAM, results, 0);
+		System.out.println("Have program " + results[0] + " bound");
+		gl.glGetVertexAttribiv(0, gl.GL_VERTEX_ATTRIB_ARRAY_STRIDE, results, 0);
+		System.out.println("Stride of 0 is "+results[0]);
+		gl.glGetVertexAttribiv(1, gl.GL_VERTEX_ATTRIB_ARRAY_STRIDE, results, 0);
+		System.out.println("Stride of 1 is "+results[0]);
+		gl.glGetVertexAttribiv(0, gl.GL_VERTEX_ATTRIB_ARRAY_ENABLED, results, 0);
+		System.out.println("Enabled of 0 is "+results[0]);
+		gl.glGetVertexAttribiv(1, gl.GL_VERTEX_ATTRIB_ARRAY_ENABLED, results, 0);
+		System.out.println("Enabled of 1 is "+results[0]);*/
+
+		gl.glBufferData(GL.GL_ARRAY_BUFFER, 4*6*6, FloatBuffer.wrap(new float[]
 		//White triangle up
-		gl.glColor3f(1.0f, 1.0f, 1.0f);
-		gl.glVertex3d(1, 0, 3);
-		gl.glVertex3d(-1, 0, 3);
-		gl.glVertex3d(0, 1, 3);
+			{ 1, 0, 3,	1, 1, 1,
+			 -1, 0, 3,	1, 1, 1,
+			  0, 1, 3,	1, 1, 1,
 		//Red triangle down
-		gl.glColor3f(1.0f, 0, 0);
-		gl.glVertex3d(1, 0, 3);
-		gl.glVertex3d(-1, 0, 3);
-		gl.glVertex3d(0, -1, 3);
-
-		gl.glEnd();
+			  1, 0, 3,	1, 0, 0,
+			 -1, 0, 3,	1, 0, 0,
+			  0,-1, 3,	1, 0, 0}), gl.GL_STREAM_DRAW);
+		//Draw 6 vertices starting at vertex 0
+		gl.glDrawArrays(GL.GL_TRIANGLES, 0, 6);
+		int code = gl.glGetError();
+		if (code != 0) System.out.println(GLU.gluErrorString(code));
 	}
 
 	//Does the actions that need to happen once per tick
