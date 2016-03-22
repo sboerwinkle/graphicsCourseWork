@@ -1,3 +1,4 @@
+package lumin;
 
 /**
  * Much of this class was shamelessly stolen from (http://www.jocl.org/samples/JOCLSimpleGL3.java).
