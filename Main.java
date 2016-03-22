@@ -121,7 +121,11 @@ public final class Main
 			System.out.println("Vertex Shader failed compilation:");
 			byte[] buffer = new byte[512];
 			gl.glGetShaderInfoLog(vertexPrgId, 512, null, 0, buffer, 0);
-			System.out.println(buffer);
+			for (int i = 0; i < 512; i++) {
+				if (buffer[i] == 0) break;
+				System.out.print((char)buffer[i]);
+			}
+			System.out.println();
 		}
 
 		gl.glGetShaderiv(fragmentPrgId, gl.GL_COMPILE_STATUS, status, 0);
@@ -129,7 +133,11 @@ public final class Main
 			System.out.println("Fragment Shader failed compilation:");
 			byte[] buffer = new byte[512];
 			gl.glGetShaderInfoLog(fragmentPrgId, 512, null, 0, buffer, 0);
-			System.out.println(buffer);
+			for (int i = 0; i < 512; i++) {
+				if (buffer[i] == 0) break;
+				System.out.print((char)buffer[i]);
+			}
+			System.out.println();
 		}
 		gl.glBindAttribLocation(prgId, 0, "pos");
 		gl.glBindAttribLocation(prgId, 1, "Color");
@@ -138,6 +146,8 @@ public final class Main
 		int[] array = new int[1];
 		gl.glGenBuffers(1, array, 0);
 		vbo = array[0];
+
+		System.out.println(gl.glGetString(GL2.GL_SHADING_LANGUAGE_VERSION));
 	}
 
 	public void		dispose(GLAutoDrawable drawable)
@@ -164,7 +174,7 @@ public final class Main
 			0,0,0,0,
 			0,0,0,1}, 0);*/
 
-		gl.glClear(GL.GL_COLOR_BUFFER_BIT);
+		gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
 		drawSomething(gl);
 	}
 
@@ -189,7 +199,7 @@ public final class Main
 		gl.glVertexAttribPointer(1, 3, GL.GL_FLOAT, false, 24, 12);
 		gl.glEnableVertexAttribArray(0);
 		gl.glEnableVertexAttribArray(1);
-
+		gl.glEnable(GL.GL_DEPTH_TEST);
 
 		/*int[] results = new int[1];
 		gl.glGetIntegerv(gl.GL_CURRENT_PROGRAM, results, 0);
@@ -214,8 +224,42 @@ public final class Main
 			  0,-1, 3,	1, 0, 0}), gl.GL_STREAM_DRAW);
 		//Draw 6 vertices starting at vertex 0
 		gl.glDrawArrays(GL.GL_TRIANGLES, 0, 6);
+		drawCube(gl, 0, 0, 4.5, 1, new Color[] {Color.RED, Color.GREEN, Color.BLUE});
 		int code = gl.glGetError();
 		if (code != 0) System.out.println(GLU.gluErrorString(code));
+	}
+
+	private void drawCube(GL2 gl, double double_x, double double_y, double double_z, double double_r, Color[] colors) {
+		float x = (float)double_x;
+		float y = (float)double_y;
+		float z = (float)double_z;
+		float r = (float)double_r;
+		float[] data = new float[6*6*6];
+		int nc = colors.length; // nc => numColors
+		float[] dxs = {-r, r, r, -r};
+		float[] dys = {-r, -r, r, r};
+		int[] corners = {0, 1, 2, 2, 3, 0}; // To draw a square using a pair of triangles, visit corners in this order
+		for (int dim = 0; dim < 3; dim++) {
+			for (float dz : new float[] {-r, r}) {
+				int ix1 = dim + (dz > 0 ? 3 : 0);
+				Color col = colors[ix1%nc];
+				for (int i = 0; i < 6; i++) {
+					int ix = ix1*36+i*6;
+					int c = corners[i];
+					data[ix+0] = x;
+					data[ix+1] = y;
+					data[ix+2] = z;
+					data[ix+dim] += dz;
+					data[ix+(dim+1)%3] += dxs[c];
+					data[ix+(dim+2)%3] += dys[c];
+					data[ix+3] = col.getRed()/255f;
+					data[ix+4] = col.getGreen()/255f;
+					data[ix+5] = col.getBlue()/255f;
+				}
+			}
+		}
+		gl.glBufferData(GL.GL_ARRAY_BUFFER, 4*6*6*6, FloatBuffer.wrap(data), gl.GL_STREAM_DRAW);
+		gl.glDrawArrays(GL.GL_TRIANGLES, 0, 6*6);
 	}
 
 	//Does the actions that need to happen once per tick
