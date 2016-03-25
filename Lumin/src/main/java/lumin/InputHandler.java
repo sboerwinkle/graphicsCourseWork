@@ -2,15 +2,19 @@ package lumin;
 
 import java.awt.event.*;
 import java.awt.Robot;
+import static java.awt.event.KeyEvent.*;
 
 public class InputHandler implements KeyListener, MouseMotionListener {
 	private Robot			mouseBot;		//For keeping the cursor in-screen
 	public int			w;			// Canvas width
 	public int			h;			// Canvas height
 	public int			frameX, frameY;		// Canvas location
-	public boolean[]		keys = new boolean[6];
+	public boolean[]		keys = new boolean[12];
 	static int[]			codes =
-		{KeyEvent.VK_S, KeyEvent.VK_W, KeyEvent.VK_D, KeyEvent.VK_A, KeyEvent.VK_SHIFT, KeyEvent.VK_SPACE};
+	//Movement keys
+		{VK_S, VK_W, VK_D, VK_A, VK_SHIFT, VK_SPACE,
+	//Keys to move the shadow box
+		 VK_H, VK_F, VK_R, VK_Y, VK_G, VK_T};
 	public double pitch, yaw;
 
 	public InputHandler() {
@@ -34,10 +38,10 @@ public class InputHandler implements KeyListener, MouseMotionListener {
 				return;
 			}
 		}
-		if (e.getKeyCode() == KeyEvent.VK_J) yaw += 0.05;
-		if (e.getKeyCode() == KeyEvent.VK_L) yaw -= 0.05;
-		if (e.getKeyCode() == KeyEvent.VK_I) pitch += 0.05;
-		if (e.getKeyCode() == KeyEvent.VK_K) pitch -= 0.05;
+		if (e.getKeyCode() == VK_J) yaw += 0.05;
+		if (e.getKeyCode() == VK_L) yaw -= 0.05;
+		if (e.getKeyCode() == VK_I) pitch += 0.05;
+		if (e.getKeyCode() == VK_K) pitch -= 0.05;
 	}
 
 	public void keyReleased(KeyEvent e){

@@ -27,6 +27,9 @@ public final class App
 	//Player vars
 	private double			x, y, z;		// Position
 
+	//Shadow box vars (A temporary thing, for testing the shadow system)
+	private double			sx, sy, sz;
+
 	//**********************************************************************
 	// App
 	//**********************************************************************
@@ -67,6 +70,10 @@ public final class App
 		input.frameY = p.getLocationOnScreen().y;
 		p.addKeyListener(input);
 		p.addMouseMotionListener(input);
+
+		sx = 0.1;
+		sy = 0.1;
+		sz = 4.6;
 	}
 
 	//**********************************************************************
@@ -89,7 +96,7 @@ public final class App
 		//Nearest visible depth is 0.05, farthest visible depth is 10.
 		//Note that you get slightly better occlusion accuracy (I'm pretty sure)
 		//The lower the ratio zFar/zNear is. Also zNear can't be 0.
-		GLU.gluPerspective(45, 1, 0.1, 20);
+		GLU.gluPerspective(90, 1, 0.1, 20);
 
 		System.out.println(gl.glGetString(GL2.GL_SHADING_LANGUAGE_VERSION));
 	}
@@ -150,6 +157,39 @@ public final class App
 
 		gl.glEnd();
 		drawCube(gl, 0, 0, 4.5, 1, new Color[] {Color.red, Color.green, Color.blue});
+
+		Shadows.shadowPrep(gl);
+
+		//We're going to shadow everything inside the ominously-named shadow cube
+		drawCube(gl, sx, sy, sz, 1, new Color[] {new Color(0xdeadBeef)});
+
+		Shadows.renderPrep(gl);
+
+		//I just want to make it pure green, so depth test is balogna
+		gl.glDisable(gl.GL_DEPTH_TEST);
+		//Additionally this "flying around space" thing is garbage, always paint it in front of me
+		gl.glMatrixMode(gl.GL_MODELVIEW);
+		gl.glPushMatrix();
+		gl.glLoadIdentity();
+
+		gl.glBegin(GL.GL_TRIANGLE_STRIP);
+		//COLOR
+		gl.glColor3f(0, 1, 0);
+		//THE
+		gl.glVertex3d(1, 1, -1);
+		//WHOLE
+		gl.glVertex3d(1, -1, -1);
+		//SCREEN
+		gl.glVertex3d(-1, 1, -1);
+		//GREEN
+		gl.glVertex3d(-1, -1, -1);
+		gl.glEnd();
+
+		//Undo my changes
+		gl.glPopMatrix();
+		gl.glEnable(gl.GL_DEPTH_TEST);
+
+		Shadows.cleanup(gl);
 	}
 
 	private void drawCube(GL2 gl, double double_x, double double_y, double double_z, double double_r, Color[] colors) {
@@ -194,6 +234,10 @@ public final class App
 		z += cosY*input.getVec(0)-sinY*input.getVec(1);
 		x += cosY*input.getVec(1)+sinY*input.getVec(0);
 		y += mvmnt * input.getVec(2);
+
+		sx += mvmnt*input.getVec(3);
+		sy += mvmnt*input.getVec(4);
+		sz += mvmnt*input.getVec(5);
 	}
 
 	// This example on this page is long but helpful:
