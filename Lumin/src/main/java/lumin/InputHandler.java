@@ -10,7 +10,7 @@ public class InputHandler implements KeyListener, MouseMotionListener {
 	public int			frameX, frameY;		// Canvas location
 	public boolean[]		keys = new boolean[6];
 	static int[]			codes =
-		{KeyEvent.VK_S, KeyEvent.VK_W, KeyEvent.VK_A, KeyEvent.VK_D, KeyEvent.VK_SPACE, KeyEvent.VK_SHIFT};
+		{KeyEvent.VK_S, KeyEvent.VK_W, KeyEvent.VK_D, KeyEvent.VK_A, KeyEvent.VK_SHIFT, KeyEvent.VK_SPACE};
 	public double pitch, yaw;
 
 	public InputHandler() {
@@ -34,10 +34,10 @@ public class InputHandler implements KeyListener, MouseMotionListener {
 				return;
 			}
 		}
-		if (e.getKeyCode() == KeyEvent.VK_J) yaw -= 0.05;
-		if (e.getKeyCode() == KeyEvent.VK_L) yaw += 0.05;
-		if (e.getKeyCode() == KeyEvent.VK_I) pitch -= 0.05;
-		if (e.getKeyCode() == KeyEvent.VK_K) pitch += 0.05;
+		if (e.getKeyCode() == KeyEvent.VK_J) yaw += 0.05;
+		if (e.getKeyCode() == KeyEvent.VK_L) yaw -= 0.05;
+		if (e.getKeyCode() == KeyEvent.VK_I) pitch += 0.05;
+		if (e.getKeyCode() == KeyEvent.VK_K) pitch -= 0.05;
 	}
 
 	public void keyReleased(KeyEvent e){
@@ -59,10 +59,10 @@ public class InputHandler implements KeyListener, MouseMotionListener {
 		if (dx == 0 && dy == 0) return;
 		mouseBot.mouseMove(cx, cy);
 		if (Math.abs(dx) > 40 || Math.abs(dy) > 40) return;
-		pitch += dy * 0.01;
+		pitch -= dy * 0.01;
 		if (pitch < -Math.PI/2) pitch = -Math.PI/2;
 		else if (pitch > Math.PI/2) pitch = Math.PI/2;
-		yaw += dx * 0.01;
+		yaw -= dx * 0.01;
 		if (yaw > Math.PI) yaw -= Math.PI*2;
 		else if (yaw < -Math.PI) yaw += Math.PI*2;
 	}

@@ -35,6 +35,7 @@ public final class App
 	{
 		GLProfile		profile = GLProfile.getDefault();
 		GLCapabilities	capabilities = new GLCapabilities(profile);
+		capabilities.setStencilBits(8);
 		GLJPanel		panel = new GLJPanel(capabilities);
 		JFrame			frame = new JFrame("Example");
 
@@ -158,7 +159,11 @@ public final class App
 		float r = (float)double_r;
 		float[] data = new float[3];
 		int nc = colors.length; // nc => numColors
-		float[] dxs = {-r, r, r, -r};
+		//dys uses r, while dxs uses 1.
+		//This is because dxs must be multiplied by dz, which gives an r factor.
+		//This, in turn, is because the order of iteration must be flipped
+			//for far faces
+		float[] dxs = {-1, 1, 1, -1};
 		float[] dys = {-r, -r, r, r};
 		int[] corners = {0, 1, 2, 2, 3, 0}; // To draw a square using a pair of triangles, visit corners in this order
 		gl.glBegin(gl.GL_TRIANGLES);
@@ -171,7 +176,7 @@ public final class App
 					data[1] = y;
 					data[2] = z;
 					data[dim] += dz;
-					data[(dim+1)%3] += dxs[c];
+					data[(dim+1)%3] += dz*dxs[c];
 					data[(dim+2)%3] += dys[c];
 					gl.glColor3f(col.getRed()/255f, col.getGreen()/255f, col.getBlue()/255f);
 					gl.glVertex3f(data[0], data[1], data[2]);
