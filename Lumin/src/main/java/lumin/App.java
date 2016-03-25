@@ -77,6 +77,7 @@ public final class App
 		input.w = drawable.getWidth();
 		input.h = drawable.getHeight();
 		GL2 gl = drawable.getGL().getGL2();
+		gl.glEnable(gl.GL_DEPTH_TEST);
 		//We're affecting the projection matrix
 		//(The one that turns world coordinates into screen coordinates)
 		gl.glMatrixMode(gl.GL_PROJECTION);
@@ -112,7 +113,7 @@ public final class App
 		double sinY = Math.sin(input.yaw);
 		GLU.gluLookAt(x, y, z, x + cosP*sinY, y + sinP, z + cosP*cosY, -sinP*sinY, cosP, -sinP*cosY);
 
-		gl.glClear(GL.GL_COLOR_BUFFER_BIT);
+		gl.glClear(GL.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT);
 		drawSomething(gl);
 	}
 
@@ -146,6 +147,37 @@ public final class App
 		gl.glVertex3d(-1, 0, 3);
 		gl.glVertex3d(0, -1, 3);
 
+		gl.glEnd();
+		drawCube(gl, 0, 0, 4.5, 1, new Color[] {Color.red, Color.green, Color.blue});
+	}
+
+	private void drawCube(GL2 gl, double double_x, double double_y, double double_z, double double_r, Color[] colors) {
+		float x = (float)double_x;
+		float y = (float)double_y;
+		float z = (float)double_z;
+		float r = (float)double_r;
+		float[] data = new float[3];
+		int nc = colors.length; // nc => numColors
+		float[] dxs = {-r, r, r, -r};
+		float[] dys = {-r, -r, r, r};
+		int[] corners = {0, 1, 2, 2, 3, 0}; // To draw a square using a pair of triangles, visit corners in this order
+		gl.glBegin(gl.GL_TRIANGLES);
+		for (int dim = 0; dim < 3; dim++) {
+			for (float dz : new float[] {-r, r}) {
+				Color col = colors[((dz>0?3:0)+dim)%nc];
+				for (int i = 0; i < 6; i++) {
+					int c = corners[i];
+					data[0] = x;
+					data[1] = y;
+					data[2] = z;
+					data[dim] += dz;
+					data[(dim+1)%3] += dxs[c];
+					data[(dim+2)%3] += dys[c];
+					gl.glColor3f(col.getRed()/255f, col.getGreen()/255f, col.getBlue()/255f);
+					gl.glVertex3f(data[0], data[1], data[2]);
+				}
+			}
+		}
 		gl.glEnd();
 	}
 
