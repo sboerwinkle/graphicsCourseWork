@@ -38,7 +38,7 @@ public final class Shadows {
 		//Stop messing with the stencil buffer
 		gl.glStencilOp(gl.GL_KEEP, gl.GL_KEEP, gl.GL_KEEP);
 		//Only allow drawing in the areas that experienced a net negative change.
-		//(p.s.: It only works with GREATER, I don't understand why)
+		//This means 0x80 is GREATER than what's in the stencil buffer
 		gl.glStencilFunc(gl.GL_GREATER, 0x80, 0xff);
 	}
 	static void cleanup(GL2 gl) {

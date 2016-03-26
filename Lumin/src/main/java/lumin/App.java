@@ -165,31 +165,34 @@ public final class App
 
 		Shadows.renderPrep(gl);
 
-		//I just want to make it pure green, so depth test is balogna
+		letDarknessCoverTheWorld(gl);
+
+		Shadows.cleanup(gl);
+	}
+
+	private void letDarknessCoverTheWorld(GL2 gl) {
+		gl.glEnable(gl.GL_BLEND);
+		//We want to cover the whole screen, so depth test is balogna
 		gl.glDisable(gl.GL_DEPTH_TEST);
 		//Additionally this "flying around space" thing is garbage, always paint it in front of me
 		gl.glMatrixMode(gl.GL_MODELVIEW);
 		gl.glPushMatrix();
 		gl.glLoadIdentity();
 
+		gl.glBlendColor(0, 0, 0, 0.5f);
+		//To get the result color, take 0*(color we're painting) + (alpha specified above)*(color already there)
+		gl.glBlendFunc(gl.GL_ZERO, gl.GL_CONSTANT_ALPHA);
 		gl.glBegin(GL.GL_TRIANGLE_STRIP);
-		//COLOR
-		gl.glColor3f(0, 1, 0);
-		//THE
 		gl.glVertex3d(1, 1, -1);
-		//WHOLE
 		gl.glVertex3d(1, -1, -1);
-		//SCREEN
 		gl.glVertex3d(-1, 1, -1);
-		//GREEN
 		gl.glVertex3d(-1, -1, -1);
 		gl.glEnd();
 
 		//Undo my changes
 		gl.glPopMatrix();
 		gl.glEnable(gl.GL_DEPTH_TEST);
-
-		Shadows.cleanup(gl);
+		gl.glDisable(gl.GL_BLEND);
 	}
 
 	private void drawCube(GL2 gl, double double_x, double double_y, double double_z, double double_r, Color[] colors) {
