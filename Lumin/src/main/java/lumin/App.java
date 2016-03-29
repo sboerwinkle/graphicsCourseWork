@@ -27,6 +27,9 @@ public final class App
 	//Player vars
 	private double			x, y, z;		// Position
 
+	//Shadow box vars (A temporary thing, for testing the shadow system)
+	private double			sx, sy, sz;
+
 	//**********************************************************************
 	// App
 	//**********************************************************************
@@ -35,6 +38,7 @@ public final class App
 	{
 		GLProfile		profile = GLProfile.getDefault();
 		GLCapabilities	capabilities = new GLCapabilities(profile);
+		capabilities.setStencilBits(8);
 		GLJPanel		panel = new GLJPanel(capabilities);
 		JFrame			frame = new JFrame("Example");
 
@@ -66,6 +70,10 @@ public final class App
 		input.frameY = p.getLocationOnScreen().y;
 		p.addKeyListener(input);
 		p.addMouseMotionListener(input);
+
+		sx = 0.1;
+		sy = 0.1;
+		sz = 4.6;
 	}
 
 	//**********************************************************************
@@ -77,6 +85,32 @@ public final class App
 		input.w = drawable.getWidth();
 		input.h = drawable.getHeight();
 		GL2 gl = drawable.getGL().getGL2();
+		gl.glEnable(gl.GL_DEPTH_TEST);
+
+		//do some lighting and fog. I actually have very little understanding about what is happening here
+		float position[] = { 0.0f, 0f, .0f, 0.0f };
+        float local_view[] = { 0.0f };
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, position, 0);
+        //gl.glLightModelfv(GL2.GL_LIGHT_MODEL_LOCAL_VIEWER, local_view, 0);
+
+        gl.glFrontFace(GL.GL_CW);
+        gl.glEnable(GL2.GL_LIGHTING);
+        gl.glEnable(GL2.GL_LIGHT0);
+        gl.glEnable(GL2.GL_AUTO_NORMAL);
+        gl.glEnable(GL2.GL_NORMALIZE);
+
+        gl.glEnable(GL2.GL_FOG);
+        {
+            float fogColor[] = { 0.5f, 0.5f, 0.5f, .8f };
+
+            gl.glFogi(GL2.GL_FOG_MODE, GL2.GL_EXP);
+            gl.glFogfv(GL2.GL_FOG_COLOR, fogColor, 0);
+            gl.glFogf(GL2.GL_FOG_DENSITY, 0.35f);
+            gl.glHint(GL2.GL_FOG_HINT, GL.GL_DONT_CARE);
+
+            gl.glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+        }
+
 		//We're affecting the projection matrix
 		//(The one that turns world coordinates into screen coordinates)
 		gl.glMatrixMode(gl.GL_PROJECTION);
@@ -87,7 +121,7 @@ public final class App
 		//Nearest visible depth is 0.05, farthest visible depth is 10.
 		//Note that you get slightly better occlusion accuracy (I'm pretty sure)
 		//The lower the ratio zFar/zNear is. Also zNear can't be 0.
-		GLU.gluPerspective(45, 1, 0.1, 20);
+		GLU.gluPerspective(90, 1, 0.1, 20);
 
 		System.out.println(gl.glGetString(GL2.GL_SHADING_LANGUAGE_VERSION));
 	}
@@ -112,7 +146,7 @@ public final class App
 		double sinY = Math.sin(input.yaw);
 		GLU.gluLookAt(x, y, z, x + cosP*sinY, y + sinP, z + cosP*cosY, -sinP*sinY, cosP, -sinP*cosY);
 
-		gl.glClear(GL.GL_COLOR_BUFFER_BIT);
+		gl.glClear(GL.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT);
 		drawSomething(gl);
 	}
 
@@ -140,12 +174,107 @@ public final class App
 		gl.glVertex3d(1, 0, 3);
 		gl.glVertex3d(-1, 0, 3);
 		gl.glVertex3d(0, 1, 3);
-		//Red triangle down
-		gl.glColor3f(1.0f, 0, 0);
+		//Reddish triangle down
+		//gl.glColor3f(1.0f, 0, 0);
+		float mat[] = new float[4];
+
+        //gl.glPushMatrix();
+       
+    	//uhhh, this doesn't work, but should make a reddish object... 
+        mat[0] = 0.1745f;
+        mat[1] = 0.01175f;
+        mat[2] = 0.01175f;
+        mat[3] = 1.0f;
+        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_AMBIENT, mat, 0);
+        mat[0] = 0.61424f;
+        mat[1] = 0.04136f;
+        mat[2] = 0.04136f;
+        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_DIFFUSE, mat, 0);
+        mat[0] = 0.727811f;
+        mat[1] = 0.626959f;
+        mat[2] = 0.626959f;
+        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SPECULAR, mat, 0);
+        gl.glMaterialf(GL.GL_FRONT, GL2.GL_SHININESS, 0.6f * 128.0f);
+        
+
 		gl.glVertex3d(1, 0, 3);
 		gl.glVertex3d(-1, 0, 3);
 		gl.glVertex3d(0, -1, 3);
+		//gl.glPopMatrix();
 
+		gl.glEnd();
+		drawCube(gl, 0, 0, 4.5, 1, new Color[] {Color.red, Color.green, Color.blue});
+
+		drawCube(gl, 0, 0, 4.5, 5, new Color[] {Color.white, Color.white, Color.white});	//containg box
+
+		Shadows.shadowPrep(gl);
+
+		//We're going to shadow everything inside the ominously-named shadow cube
+		drawCube(gl, sx, sy, sz, 1, new Color[] {new Color(0xdeadBeef)});
+
+		Shadows.renderPrep(gl);
+
+		//letDarknessCoverTheWorld(gl);
+
+		Shadows.cleanup(gl);
+	}
+
+	private void letDarknessCoverTheWorld(GL2 gl) {
+		gl.glEnable(gl.GL_BLEND);
+		//We want to cover the whole screen, so depth test is balogna
+		gl.glDisable(gl.GL_DEPTH_TEST);
+		//Additionally this "flying around space" thing is garbage, always paint it in front of me
+		gl.glMatrixMode(gl.GL_MODELVIEW);
+		gl.glPushMatrix();
+		gl.glLoadIdentity();
+
+		gl.glBlendColor(0, 0, 0, 0.5f);
+		//To get the result color, take 0*(color we're painting) + (alpha specified above)*(color already there)
+		gl.glBlendFunc(gl.GL_ZERO, gl.GL_CONSTANT_ALPHA);
+		gl.glBegin(GL.GL_TRIANGLE_STRIP);
+		gl.glVertex3d(1, 1, -1);
+		gl.glVertex3d(1, -1, -1);
+		gl.glVertex3d(-1, 1, -1);
+		gl.glVertex3d(-1, -1, -1);
+		gl.glEnd();
+
+		//Undo my changes
+		gl.glPopMatrix();
+		gl.glEnable(gl.GL_DEPTH_TEST);
+		gl.glDisable(gl.GL_BLEND);
+	}
+
+	private void drawCube(GL2 gl, double double_x, double double_y, double double_z, double double_r, Color[] colors) {
+		float x = (float)double_x;
+		float y = (float)double_y;
+		float z = (float)double_z;
+		float r = (float)double_r;
+		float[] data = new float[3];
+		int nc = colors.length; // nc => numColors
+		//dys uses r, while dxs uses 1.
+		//This is because dxs must be multiplied by dz, which gives an r factor.
+		//This, in turn, is because the order of iteration must be flipped
+			//for far faces
+		float[] dxs = {-1, 1, 1, -1};
+		float[] dys = {-r, -r, r, r};
+		int[] corners = {0, 1, 2, 2, 3, 0}; // To draw a square using a pair of triangles, visit corners in this order
+		gl.glBegin(gl.GL_TRIANGLES);
+		for (int dim = 0; dim < 3; dim++) {
+			for (float dz : new float[] {-r, r}) {
+				Color col = colors[((dz>0?3:0)+dim)%nc];
+				for (int i = 0; i < 6; i++) {
+					int c = corners[i];
+					data[0] = x;
+					data[1] = y;
+					data[2] = z;
+					data[dim] += dz;
+					data[(dim+1)%3] += dz*dxs[c];
+					data[(dim+2)%3] += dys[c];
+					gl.glColor3f(col.getRed()/255f, col.getGreen()/255f, col.getBlue()/255f);
+					gl.glVertex3f(data[0], data[1], data[2]);
+				}
+			}
+		}
 		gl.glEnd();
 	}
 
@@ -157,6 +286,10 @@ public final class App
 		z += cosY*input.getVec(0)-sinY*input.getVec(1);
 		x += cosY*input.getVec(1)+sinY*input.getVec(0);
 		y += mvmnt * input.getVec(2);
+
+		sx += mvmnt*input.getVec(3);
+		sy += mvmnt*input.getVec(4);
+		sz += mvmnt*input.getVec(5);
 	}
 
 	// This example on this page is long but helpful:
