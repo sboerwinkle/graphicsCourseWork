@@ -86,11 +86,10 @@ public final class App
 		input.h = drawable.getHeight();
 		GL2 gl = drawable.getGL().getGL2();
 		gl.glEnable(gl.GL_DEPTH_TEST);
+		gl.glEnable(gl.GL_COLOR_MATERIAL);
 
 		//do some lighting and fog. I actually have very little understanding about what is happening here
-		float position[] = { 0.0f, 0f, .0f, 0.0f };
         float local_view[] = { 0.0f };
-		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, position, 0);
         //gl.glLightModelfv(GL2.GL_LIGHT_MODEL_LOCAL_VIEWER, local_view, 0);
 
         gl.glFrontFace(GL.GL_CW);
@@ -99,7 +98,7 @@ public final class App
         gl.glEnable(GL2.GL_AUTO_NORMAL);
         gl.glEnable(GL2.GL_NORMALIZE);
 
-        gl.glEnable(GL2.GL_FOG);
+        /*gl.glEnable(GL2.GL_FOG);
         {
             float fogColor[] = { 0.5f, 0.5f, 0.5f, .8f };
 
@@ -109,7 +108,7 @@ public final class App
             gl.glHint(GL2.GL_FOG_HINT, GL.GL_DONT_CARE);
 
             gl.glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-        }
+        }*/
 
 		//We're affecting the projection matrix
 		//(The one that turns world coordinates into screen coordinates)
@@ -166,35 +165,32 @@ public final class App
 	// http://www.linuxfocus.org/English/January1998/article17.html
 	private void	drawSomething(GL2 gl)
 	{
+		//Re-do this each time, since the modelview matrix might have changed
+		float position[] = { 0.0f, 0f, -1f, 1.0f };
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, position, 0);
+		//uhhh, this doesn't work, but should make a reddish object... 
+		float mat[] = new float[4];
+		mat[0] = 0.727811f;
+		mat[1] = 0.626959f;
+		mat[2] = 0.626959f;
+		mat[3] = 1.0f;
+		gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SPECULAR, mat, 0);
+		gl.glMaterialf(GL.GL_FRONT, GL2.GL_SHININESS, 0.6f * 128.0f);
+
 		gl.glBegin(GL.GL_TRIANGLES);
 		//Note that our perspective is looking down the negative z axis by default.
 
 		//White triangle up
+		gl.glNormal3f(0, 0, -1);
 		gl.glColor3f(1.0f, 1.0f, 1.0f);
 		gl.glVertex3d(1, 0, 3);
 		gl.glVertex3d(-1, 0, 3);
 		gl.glVertex3d(0, 1, 3);
 		//Reddish triangle down
-		//gl.glColor3f(1.0f, 0, 0);
-		float mat[] = new float[4];
+		gl.glColor3f(1.0f, 0, 0);
 
         //gl.glPushMatrix();
        
-    	//uhhh, this doesn't work, but should make a reddish object... 
-        mat[0] = 0.1745f;
-        mat[1] = 0.01175f;
-        mat[2] = 0.01175f;
-        mat[3] = 1.0f;
-        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_AMBIENT, mat, 0);
-        mat[0] = 0.61424f;
-        mat[1] = 0.04136f;
-        mat[2] = 0.04136f;
-        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_DIFFUSE, mat, 0);
-        mat[0] = 0.727811f;
-        mat[1] = 0.626959f;
-        mat[2] = 0.626959f;
-        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SPECULAR, mat, 0);
-        gl.glMaterialf(GL.GL_FRONT, GL2.GL_SHININESS, 0.6f * 128.0f);
         
 
 		gl.glVertex3d(1, 0, 3);
@@ -261,7 +257,10 @@ public final class App
 		int[] corners = {0, 1, 2, 2, 3, 0}; // To draw a square using a pair of triangles, visit corners in this order
 		gl.glBegin(gl.GL_TRIANGLES);
 		for (int dim = 0; dim < 3; dim++) {
+			float[] normal = new float[3];
 			for (float dz : new float[] {-r, r}) {
+				normal[dim] = dz>0 ? 1 : -1;
+				gl.glNormal3fv(normal, 0);
 				Color col = colors[((dz>0?3:0)+dim)%nc];
 				for (int i = 0; i < 6; i++) {
 					int c = corners[i];
