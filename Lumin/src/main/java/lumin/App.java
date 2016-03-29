@@ -214,7 +214,7 @@ public final class App
 
 		Shadows.renderPrep(gl);
 
-		//letDarknessCoverTheWorld(gl);
+		letDarknessCoverTheWorld(gl);
 
 		Shadows.cleanup(gl);
 	}
@@ -239,6 +239,7 @@ public final class App
 		gl.glEnd();
 
 		//Undo my changes
+		gl.glBlendFunc(gl.GL_ONE, gl.GL_ZERO);
 		gl.glPopMatrix();
 		gl.glEnable(gl.GL_DEPTH_TEST);
 		gl.glDisable(gl.GL_BLEND);
@@ -255,7 +256,7 @@ public final class App
 		//This is because dxs must be multiplied by dz, which gives an r factor.
 		//This, in turn, is because the order of iteration must be flipped
 			//for far faces
-		float[] dxs = {-1, 1, 1, -1};
+		float[] dxs = {1, -1, -1, 1};
 		float[] dys = {-r, -r, r, r};
 		int[] corners = {0, 1, 2, 2, 3, 0}; // To draw a square using a pair of triangles, visit corners in this order
 		gl.glBegin(gl.GL_TRIANGLES);
