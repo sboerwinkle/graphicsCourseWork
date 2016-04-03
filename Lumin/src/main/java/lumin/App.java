@@ -3,6 +3,7 @@ package lumin;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
+import java.util.ArrayList;
 import java.util.Random;
 import javax.swing.*;
 import javax.media.opengl.*;
@@ -30,6 +31,8 @@ public final class App
 	//Shadow box vars (A temporary thing, for testing the shadow system)
 	private double			sx, sy, sz;
 
+	ArrayList<Pulse> pulses;
+
 	//**********************************************************************
 	// App
 	//**********************************************************************
@@ -42,11 +45,13 @@ public final class App
 		GLJPanel		panel = new GLJPanel(capabilities);
 		JFrame			frame = new JFrame("Example");
 
+		Spheres.init(); // Do all the trig ahead of time
+
 		frame.setContentPane(panel);
 		panel.setPreferredSize(new Dimension(600, 600));
 		frame.pack();
-		frame.setVisible(true);
 		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		frame.setVisible(true);
 
 		frame.addWindowListener(new WindowAdapter() {
 				public void windowClosing(WindowEvent e) {
@@ -74,6 +79,8 @@ public final class App
 		sx = 0.1;
 		sy = 0.1;
 		sz = 4.6;
+
+		pulses = new ArrayList<Pulse>();
 	}
 
 	//**********************************************************************
@@ -188,18 +195,16 @@ public final class App
 		gl.glVertex3d(0, 1, 3);
 		//Reddish triangle down
 		gl.glColor3f(1.0f, 0, 0);
-
-        //gl.glPushMatrix();
-       
-        
-
 		gl.glVertex3d(1, 0, 3);
 		gl.glVertex3d(-1, 0, 3);
 		gl.glVertex3d(0, -1, 3);
 		//gl.glPopMatrix();
 
 		gl.glEnd();
+
 		drawCube(gl, 0, 0, 4.5, 1, new Color[] {Color.red, Color.green, Color.blue});
+		gl.glColor3f(0, 1, 0);
+		Spheres.drawSphere(gl, 2.5, 0, 4.5, 1);
 
 		drawCube(gl, 0, 0, 4.5, 5, new Color[] {Color.white, Color.white, Color.white});	//containg box
 
@@ -210,13 +215,22 @@ public final class App
 
 		Shadows.renderPrep(gl);
 
-		letDarknessCoverTheWorld(gl);
+		gl.glColor4f(0, 0, 0, 0.5f);
+		fillScreen(gl);
 
+		Shadows.cleanup(gl);
+
+		Shadows.shadowPrep(gl);
+		for (Pulse p : pulses) p.render(gl);
+		Shadows.renderPrep(gl);
+		gl.glColor4f(.5f, 1, .5f, 1);
+		fillScreen(gl);
 		Shadows.cleanup(gl);
 	}
 
-	private void letDarknessCoverTheWorld(GL2 gl) {
+	private void fillScreen(GL2 gl) {
 		gl.glEnable(gl.GL_BLEND);
+		gl.glDisable(gl.GL_LIGHTING);
 		//We want to cover the whole screen, so depth test is balogna
 		gl.glDisable(gl.GL_DEPTH_TEST);
 		//Additionally this "flying around space" thing is garbage, always paint it in front of me
@@ -224,9 +238,8 @@ public final class App
 		gl.glPushMatrix();
 		gl.glLoadIdentity();
 
-		gl.glBlendColor(0, 0, 0, 0.5f);
 		//To get the result color, take 0*(color we're painting) + (alpha specified above)*(color already there)
-		gl.glBlendFunc(gl.GL_ZERO, gl.GL_CONSTANT_ALPHA);
+		gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA);
 		gl.glBegin(GL.GL_TRIANGLE_STRIP);
 		gl.glVertex3d(1, 1, -1);
 		gl.glVertex3d(1, -1, -1);
@@ -238,6 +251,7 @@ public final class App
 		gl.glBlendFunc(gl.GL_ONE, gl.GL_ZERO);
 		gl.glPopMatrix();
 		gl.glEnable(gl.GL_DEPTH_TEST);
+		gl.glEnable(gl.GL_LIGHTING);
 		gl.glDisable(gl.GL_BLEND);
 	}
 
@@ -290,6 +304,14 @@ public final class App
 		sx += mvmnt*input.getVec(3);
 		sy += mvmnt*input.getVec(4);
 		sz += mvmnt*input.getVec(5);
+
+		for (Pulse p : pulses) p.size += mvmnt;
+		while (!pulses.isEmpty() && pulses.get(0).size >= 20) pulses.remove(0);
+
+		if (input.actions[0]) {
+			input.actions[0] = false;
+			pulses.add(new Pulse(x, y, z));
+		}
 	}
 
 	// This example on this page is long but helpful:

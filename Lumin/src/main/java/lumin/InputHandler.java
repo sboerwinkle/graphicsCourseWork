@@ -10,12 +10,15 @@ public class InputHandler implements KeyListener, MouseMotionListener {
 	public int			h;			// Canvas height
 	public int			frameX, frameY;		// Canvas location
 	public boolean[]		keys = new boolean[12];
-	static int[]			codes =
+	static final int[]		moveCodes =
 	//Movement keys
 		{VK_S, VK_W, VK_D, VK_A, VK_SHIFT, VK_SPACE,
 	//Keys to move the shadow box
 		 VK_H, VK_F, VK_R, VK_Y, VK_G, VK_T};
 	public double pitch, yaw;
+
+	public boolean[]		actions = new boolean[1];
+	static final int[]		actionCodes = {VK_E};
 
 	public InputHandler() {
 		try {
@@ -32,9 +35,15 @@ public class InputHandler implements KeyListener, MouseMotionListener {
 	}
 
 	public void keyPressed(KeyEvent e){
-		for (int i = 0; i < codes.length; i++) {
-			if (e.getKeyCode() == codes[i]) {
+		for (int i = 0; i < moveCodes.length; i++) {
+			if (e.getKeyCode() == moveCodes[i]) {
 				keys[i] = true;
+				return;
+			}
+		}
+		for (int i = 0; i < actionCodes.length; i++) {
+			if (e.getKeyCode() == actionCodes[i]) {
+				actions[i] = true;
 				return;
 			}
 		}
@@ -45,8 +54,8 @@ public class InputHandler implements KeyListener, MouseMotionListener {
 	}
 
 	public void keyReleased(KeyEvent e){
-		for (int i = 0; i < codes.length; i++) {
-			if (e.getKeyCode() == codes[i]) {
+		for (int i = 0; i < moveCodes.length; i++) {
+			if (e.getKeyCode() == moveCodes[i]) {
 				keys[i] = false;
 				return;
 			}
