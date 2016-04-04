@@ -25,9 +25,9 @@ public final class Shadows {
 		//For each back face that we can see (note that we never disabled the depth test,
 			//so it is still calculating which faces we can see),
 		//we increment the counter.
-		gl.glStencilOpSeparate(gl.GL_BACK, gl.GL_KEEP, gl.GL_KEEP, gl.GL_INCR_WRAP);
+		gl.glStencilOpSeparate(gl.GL_BACK, gl.GL_KEEP, gl.GL_DECR_WRAP, gl.GL_KEEP);
 		//For each front face we can see, decrement the counter.
-		gl.glStencilOpSeparate(gl.GL_FRONT, gl.GL_KEEP, gl.GL_KEEP, gl.GL_DECR_WRAP);
+		gl.glStencilOpSeparate(gl.GL_FRONT, gl.GL_KEEP, gl.GL_INCR_WRAP, gl.GL_KEEP);
 		//If something's in the volume, we'll be able to see more front faces than back faces,
 		//and the net change will be negative.
 	}
