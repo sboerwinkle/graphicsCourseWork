@@ -1,5 +1,6 @@
 package lumin;
 
+import java.awt.Color;
 import javax.media.opengl.*;
 
 /**
@@ -11,18 +12,18 @@ import javax.media.opengl.*;
  * Call cleanup<br/>
  */
 public class Pulse {
-	double x, y, z;
-	double size;
+	float size;
+	Sphere me;
 
 	Pulse(double X, double Y, double Z) {
-		x = X;
-		y = Y;
-		z = Z;
-		size = 0.5;
+		me = new Sphere(X, Y, Z, 0, Color.black);
+		size = 0.5f;
 	}
 
 	void render(GL2 gl) {
-		Spheres.drawSphere(gl, x, y, z, size+0.5);
-		Spheres.drawSphere(gl, x, y, z, -size);
+		me.r = size+0.5f;
+		me.render(gl);
+		me.r = -size;
+		me.render(gl);
 	}
 }

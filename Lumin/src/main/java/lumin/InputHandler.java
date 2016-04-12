@@ -17,8 +17,8 @@ public class InputHandler implements KeyListener, MouseMotionListener {
 		 VK_H, VK_F, VK_R, VK_Y, VK_G, VK_T};
 	public double pitch, yaw;
 
-	public boolean[]		actions = new boolean[1];
-	static final int[]		actionCodes = {VK_E};
+	public boolean[]		actions = new boolean[2];
+	static final int[]		actionCodes = {VK_E, VK_Q};
 
 	public InputHandler() {
 		try {

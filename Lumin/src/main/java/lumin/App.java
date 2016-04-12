@@ -30,6 +30,9 @@ public final class App
 
 	//Shadow box vars (A temporary thing, for testing the shadow system)
 	private double			sx, sy, sz;
+	private float[]			lightPos = {0, 0, -1, 1};
+
+	private Item[]			items;
 
 	ArrayList<Pulse> pulses;
 
@@ -45,7 +48,7 @@ public final class App
 		GLJPanel		panel = new GLJPanel(capabilities);
 		JFrame			frame = new JFrame("Example");
 
-		Spheres.init(); // Do all the trig ahead of time
+		Sphere.init(); // Do all the trig ahead of time
 
 		frame.setContentPane(panel);
 		panel.setPreferredSize(new Dimension(600, 600));
@@ -81,6 +84,11 @@ public final class App
 		sz = 4.6;
 
 		pulses = new ArrayList<Pulse>();
+
+		items = new Item[3];
+		items[0] = new Cube(0, 0, 4.5, 1, new Color[] {Color.red, Color.green, Color.blue});
+		items[1] = new Cube(0, 0, 4.5, 5, new Color[] {Color.white, Color.white, Color.white});
+		items[2] = new Sphere(2.5, 0, 4.5, 1, Color.green);
 	}
 
 	//**********************************************************************
@@ -173,8 +181,7 @@ public final class App
 	private void	drawSomething(GL2 gl)
 	{
 		//Re-do this each time, since the modelview matrix might have changed
-		float position[] = { 0.0f, 0f, -1f, 1.0f };
-		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, position, 0);
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, lightPos, 0);
 		//uhhh, this doesn't work, but should make a reddish object... 
 		float mat[] = new float[4];
 		mat[0] = 0.727811f;
@@ -202,21 +209,28 @@ public final class App
 
 		gl.glEnd();
 
-		drawCube(gl, 0, 0, 4.5, 1, new Color[] {Color.red, Color.green, Color.blue});
+		for (Item i : items) i.render(gl);
+		/*drawCube(gl, 0, 0, 4.5, 1, new Color[] {Color.red, Color.green, Color.blue});
 		gl.glColor3f(0, 1, 0);
 		Spheres.drawSphere(gl, 2.5, 0, 4.5, 1);
 
 		drawCube(gl, 0, 0, 4.5, 5, new Color[] {Color.white, Color.white, Color.white});	//containg box
+		*/
 
 		Shadows.shadowPrep(gl);
 
-		//We're going to shadow everything inside the ominously-named shadow cube
+		/*//We're going to shadow everything inside the ominously-named shadow cube
 		drawCube(gl, sx, sy, sz, 1, new Color[] {new Color(0xdeadBeef)});
+		*/
+		for (Item i : items) if (i instanceof Sphere) i.renderShadow(gl, lightPos);
 
 		Shadows.renderPrep(gl);
 
-		gl.glColor4f(0, 0, 0, 0.5f);
-		fillScreen(gl);
+        	gl.glDisable(GL2.GL_LIGHT0);
+		for (Item i : items) i.render(gl);
+		//gl.glColor4f(0, 0, 0, 0.5f);
+		//fillScreen(gl);
+        	gl.glEnable(GL2.GL_LIGHT0);
 
 		Shadows.cleanup(gl);
 
@@ -255,43 +269,6 @@ public final class App
 		gl.glDisable(gl.GL_BLEND);
 	}
 
-	private void drawCube(GL2 gl, double double_x, double double_y, double double_z, double double_r, Color[] colors) {
-		float x = (float)double_x;
-		float y = (float)double_y;
-		float z = (float)double_z;
-		float r = (float)double_r;
-		float[] data = new float[3];
-		int nc = colors.length; // nc => numColors
-		//dys uses r, while dxs uses 1.
-		//This is because dxs must be multiplied by dz, which gives an r factor.
-		//This, in turn, is because the order of iteration must be flipped
-			//for far faces
-		float[] dxs = {1, -1, -1, 1};
-		float[] dys = {-r, -r, r, r};
-		int[] corners = {0, 1, 2, 2, 3, 0}; // To draw a square using a pair of triangles, visit corners in this order
-		gl.glBegin(gl.GL_TRIANGLES);
-		for (int dim = 0; dim < 3; dim++) {
-			float[] normal = new float[3];
-			for (float dz : new float[] {-r, r}) {
-				normal[dim] = dz>0 ? 1 : -1;
-				gl.glNormal3fv(normal, 0);
-				Color col = colors[((dz>0?3:0)+dim)%nc];
-				for (int i = 0; i < 6; i++) {
-					int c = corners[i];
-					data[0] = x;
-					data[1] = y;
-					data[2] = z;
-					data[dim] += dz;
-					data[(dim+1)%3] += dz*dxs[c];
-					data[(dim+2)%3] += dys[c];
-					gl.glColor3f(col.getRed()/255f, col.getGreen()/255f, col.getBlue()/255f);
-					gl.glVertex3f(data[0], data[1], data[2]);
-				}
-			}
-		}
-		gl.glEnd();
-	}
-
 	//Does the actions that need to happen once per tick
 	private void tick(int nanos) {
 		double mvmnt = nanos/(double)1e9;
@@ -311,6 +288,12 @@ public final class App
 		if (input.actions[0]) {
 			input.actions[0] = false;
 			pulses.add(new Pulse(x, y, z));
+		}
+		if (input.actions[1]) {
+			input.actions[1] = false;
+			lightPos[0] = (float)x;
+			lightPos[1] = (float)y;
+			lightPos[2] = (float)z;
 		}
 	}
 
