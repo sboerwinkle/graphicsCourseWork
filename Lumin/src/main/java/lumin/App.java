@@ -135,7 +135,7 @@ public final class App
 		//Nearest visible depth is 0.05, farthest visible depth is 10.
 		//Note that you get slightly better occlusion accuracy (I'm pretty sure)
 		//The lower the ratio zFar/zNear is. Also zNear can't be 0.
-		GLU.gluPerspective(90, 1, 0.1, 20);
+		GLU.gluPerspective(90, 1, 0.1, 40);
 
 		System.out.println(gl.glGetString(GL2.GL_SHADING_LANGUAGE_VERSION));
 	}
@@ -161,7 +161,10 @@ public final class App
 		GLU.gluLookAt(x, y, z, x + cosP*sinY, y + sinP, z + cosP*cosY, -sinP*sinY, cosP, -sinP*cosY);
 
 		gl.glClear(GL.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT);
+		//gl.glEnable(gl.GL_CULL_FACE);
+		//gl.glCullFace(gl.GL_BACK);
 		drawSomething(gl);
+		//gl.glDisable(gl.GL_CULL_FACE);
 	}
 
 	public void		reshape(GLAutoDrawable drawable, int x, int y, int w, int h)
@@ -209,27 +212,22 @@ public final class App
 
 		gl.glEnd();
 
-		for (Item i : items) i.render(gl);
-		/*drawCube(gl, 0, 0, 4.5, 1, new Color[] {Color.red, Color.green, Color.blue});
-		gl.glColor3f(0, 1, 0);
-		Spheres.drawSphere(gl, 2.5, 0, 4.5, 1);
+		//gl.glColor3f(1, 0, 0);
+		//Shadows.renderShadowTri(gl, new float[] {3, 0, 2, 1, 0, 2, 2, -1, 2}, lightPos);
 
-		drawCube(gl, 0, 0, 4.5, 5, new Color[] {Color.white, Color.white, Color.white});	//containg box
-		*/
+		for (Item i : items) i.render(gl);
 
 		Shadows.shadowPrep(gl);
-
-		/*//We're going to shadow everything inside the ominously-named shadow cube
-		drawCube(gl, sx, sy, sz, 1, new Color[] {new Color(0xdeadBeef)});
-		*/
-		for (Item i : items) if (i instanceof Sphere) i.renderShadow(gl, lightPos);
+		
+		for (Item i : items) i.renderShadow(gl, lightPos);
+		//gl.glColor3f(0, 1, 0);
+		//Shadows.renderShadowTri(gl, new float[] {1,1,3.5f,-1,1,3.5f,-1,-1,3.5f}, lightPos);
+		//items[0].renderShadow(gl, lightPos);
 
 		Shadows.renderPrep(gl);
 
         	gl.glDisable(GL2.GL_LIGHT0);
 		for (Item i : items) i.render(gl);
-		//gl.glColor4f(0, 0, 0, 0.5f);
-		//fillScreen(gl);
         	gl.glEnable(GL2.GL_LIGHT0);
 
 		Shadows.cleanup(gl);

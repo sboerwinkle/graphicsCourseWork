@@ -48,4 +48,41 @@ public final class Shadows {
 		gl.glStencilFunc(gl.GL_ALWAYS, 0, 0);
 		gl.glDepthFunc(gl.GL_LESS);
 	}
+
+	/**
+	 * Renders the shadow volume cast by a single triangle.
+	 * This triangle should be facing towards the light source.
+	 * @param points 9 floats: x, y, z of 1st point, xyz of 2nd pt., xyz of 3rd pt.
+	*/
+	static void renderShadowTri(GL2 gl, float[] points, float[] lightPos) {
+		float[] farPts = new float[9];
+		float[] vec = new float[3];
+		for (int i = 0; i < 3; i++) {
+			float mag2 = 0;
+			for (int j = 0; j < 3; j++) {
+				vec[j] = points[3*i+j] - lightPos[j];
+				mag2 += vec[j] * vec[j];
+			}
+			float fac = (float)(10/Math.sqrt((double)mag2));
+			for (int j = 0; j < 3; j++) {
+				farPts[3*i+j] = points[3*i+j] + fac*vec[j];
+			}
+		}
+		gl.glBegin(gl.GL_TRIANGLE_STRIP);
+		gl.glVertex3fv(points, 0);
+		gl.glVertex3fv(points, 3);
+		gl.glVertex3fv(points, 6);
+		gl.glVertex3fv(farPts, 3);
+		gl.glVertex3fv(farPts, 6);
+		gl.glVertex3fv(farPts, 0);
+		gl.glVertex3fv(points, 6);
+		gl.glVertex3fv(points, 0);
+		gl.glEnd();
+		gl.glBegin(gl.GL_TRIANGLE_FAN);
+		gl.glVertex3fv(points, 0);
+		gl.glVertex3fv(farPts, 0);
+		gl.glVertex3fv(farPts, 3);
+		gl.glVertex3fv(points, 3);
+		gl.glEnd();
+	}
 }
