@@ -31,6 +31,8 @@ public final class App
 	//Position of the light source
 	private float[]			lightPos = {0, 0, -1, 1};
 
+	private float[]			zeroPt = {0, 0, 0, 1};
+
 	private Item[]			items;
 	private int			selectedItem; // If no item is selected, this is items.length
 
@@ -153,6 +155,16 @@ public final class App
 
 		gl.glMatrixMode(gl.GL_MODELVIEW);
 		gl.glLoadIdentity();
+		//Set up the flashlight here, since we don't want it transformed by the modelview matrix.
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, zeroPt, 0);
+		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_CONSTANT_ATTENUATION, 0);
+		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_QUADRATIC_ATTENUATION, 1);
+		//Make the flashlight a spot light
+		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_SPOT_EXPONENT, 3);
+		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_SPOT_CUTOFF, 90);
+		//Turn off glare on the flashlight, it's distracting
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_SPECULAR, zeroPt, 0);
+
 		double cosP = Math.cos(input.pitch);
 		double sinP = Math.sin(input.pitch);
 		double cosY = Math.cos(input.yaw);
@@ -182,8 +194,6 @@ public final class App
 	// http://www.linuxfocus.org/English/January1998/article17.html
 	private void	drawSomething(GL2 gl)
 	{
-		//Re-do this each time, since the modelview matrix might have changed
-		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, lightPos, 0);
 		//Set the specular reflectiveness of the materials
 		float mat[] = new float[4];
 		mat[0] = 0.626959f;
@@ -212,14 +222,18 @@ public final class App
 
 		gl.glEnd();
 
-		//gl.glColor3f(1, 0, 0);
-		//Shadows.renderShadowTri(gl, new float[] {3, 0, 2, 1, 0, 2, 2, -1, 2}, lightPos);
-
-        	gl.glDisable(GL2.GL_LIGHT0);
 		for (Item i : items) i.render(gl);
-        	gl.glEnable(GL2.GL_LIGHT0);
 
 		//Render Light 0 ================================
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, lightPos, 0);
+		/*//Things are simpler to make pretty if this light doesn't attenuate with distance
+		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_QUADRATIC_ATTENUATION, 0);
+		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_CONSTANT_ATTENUATION, 1);*/
+		//Point lights are not spot lights
+		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_SPOT_CUTOFF, 180);
+		//Point lights have regular glare
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_SPECULAR, new float[] {1, 1, 1, 1}, 0);
+
 		Shadows.shadowPrep(gl);
 		
 		for (Item i : items) i.renderShadow(gl, lightPos);
@@ -229,7 +243,7 @@ public final class App
 
 		Shadows.renderPrep(gl);
 
-		gl.glLightModelfv(gl.GL_LIGHT_MODEL_AMBIENT, new float[] {0, 0, 0, 1}, 0);
+		gl.glLightModelfv(gl.GL_LIGHT_MODEL_AMBIENT, zeroPt, 0);
 		gl.glEnable(gl.GL_BLEND);
 		gl.glBlendFunc(gl.GL_ONE, gl.GL_ONE);
 		for (Item i : items) i.render(gl);
