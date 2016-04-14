@@ -28,8 +28,7 @@ public final class App
 	//Player vars
 	private double			x, y, z;		// Position
 
-	//Shadow box vars (A temporary thing, for testing the shadow system)
-	private double			sx, sy, sz;
+	//Position of the light source
 	private float[]			lightPos = {0, 0, -1, 1};
 
 	private Item[]			items;
@@ -81,10 +80,6 @@ public final class App
 		p.addMouseListener(input);
 		p.addMouseWheelListener(input);
 		p.addMouseMotionListener(input);
-
-		sx = 0.1;
-		sy = 0.1;
-		sz = 4.6;
 
 		pulses = new ArrayList<Pulse>();
 
@@ -301,10 +296,6 @@ public final class App
 		z += cosY*input.getVec(0)-sinY*input.getVec(1);
 		x += cosY*input.getVec(1)+sinY*input.getVec(0);
 		y += mvmnt * input.getVec(2);
-
-		sx += mvmnt*input.getVec(3);
-		sy += mvmnt*input.getVec(4);
-		sz += mvmnt*input.getVec(5);
 
 		for (Pulse p : pulses) p.size += mvmnt;
 		while (!pulses.isEmpty() && pulses.get(0).size >= 20) pulses.remove(0);

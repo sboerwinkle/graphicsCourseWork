@@ -9,12 +9,10 @@ public class InputHandler implements KeyListener, MouseListener, MouseWheelListe
 	public int			w;			// Canvas width
 	public int			h;			// Canvas height
 	public int			frameX, frameY;		// Canvas location
-	public boolean[]		keys = new boolean[12];
+	public boolean[]		keys = new boolean[6];
 	static final int[]		moveCodes =
 	//Movement keys
-		{VK_S, VK_W, VK_D, VK_A, VK_SHIFT, VK_SPACE,
-	//Keys to move the shadow box
-		 VK_H, VK_F, VK_R, VK_Y, VK_G, VK_T};
+		{VK_S, VK_W, VK_D, VK_A, VK_SHIFT, VK_SPACE};
 	public double pitch, yaw;
 
 	public boolean[]		actions = new boolean[2];
@@ -50,10 +48,6 @@ public class InputHandler implements KeyListener, MouseListener, MouseWheelListe
 				return;
 			}
 		}
-		if (e.getKeyCode() == VK_J) yaw += 0.05;
-		if (e.getKeyCode() == VK_L) yaw -= 0.05;
-		if (e.getKeyCode() == VK_I) pitch += 0.05;
-		if (e.getKeyCode() == VK_K) pitch -= 0.05;
 	}
 
 	public void keyReleased(KeyEvent e){
