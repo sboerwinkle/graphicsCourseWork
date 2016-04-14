@@ -33,6 +33,7 @@ public final class App
 	private float[]			lightPos = {0, 0, -1, 1};
 
 	private Item[]			items;
+	private int			selectedItem; // If no item is selected, this is items.length
 
 	ArrayList<Pulse> pulses;
 
@@ -77,6 +78,8 @@ public final class App
 		input.frameX = p.getLocationOnScreen().x;
 		input.frameY = p.getLocationOnScreen().y;
 		p.addKeyListener(input);
+		p.addMouseListener(input);
+		p.addMouseWheelListener(input);
 		p.addMouseMotionListener(input);
 
 		sx = 0.1;
@@ -89,6 +92,7 @@ public final class App
 		items[0] = new Cube(0, 0, 4.5, 1, new Color[] {Color.red, Color.green, Color.blue});
 		items[1] = new Cube(0, 0, 4.5, 5, new Color[] {Color.white, Color.white, Color.white});
 		items[2] = new Sphere(2.5, 0, 4.5, 1, Color.green);
+		selectedItem = items.length;
 	}
 
 	//**********************************************************************
@@ -194,6 +198,7 @@ public final class App
 		gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SPECULAR, mat, 0);
 		gl.glMaterialf(GL.GL_FRONT, GL2.GL_SHININESS, 0.6f * 128.0f);
 
+		//SCENE RENDER ================================
 		gl.glBegin(GL.GL_TRIANGLES);
 		//Note that our perspective is looking down the negative z axis by default.
 
@@ -217,6 +222,7 @@ public final class App
 
 		for (Item i : items) i.render(gl);
 
+		//SHADOW RENDER ================================
 		Shadows.shadowPrep(gl);
 		
 		for (Item i : items) i.renderShadow(gl, lightPos);
@@ -232,12 +238,26 @@ public final class App
 
 		Shadows.cleanup(gl);
 
+		//PULSE RENDER ================================
 		Shadows.shadowPrep(gl);
 		for (Pulse p : pulses) p.render(gl);
 		Shadows.renderPrep(gl);
 		gl.glColor4f(.5f, 1, .5f, 1);
 		fillScreen(gl);
 		Shadows.cleanup(gl);
+
+		//SELECTION RENDER ================================
+		if (selectedItem < items.length) {
+			gl.glDisable(gl.GL_DEPTH_TEST);
+			gl.glDisable(gl.GL_LIGHTING);
+			gl.glPointSize(5);
+			gl.glBegin(gl.GL_POINTS);
+			gl.glColor3f(1, (float)Math.abs(Math.cos(input.pitch)), (float)Math.abs(Math.sin(input.yaw)));
+			gl.glVertex3fv(items[selectedItem].pos, 0);
+			gl.glEnd();
+			gl.glEnable(gl.GL_LIGHTING);
+			gl.glEnable(gl.GL_DEPTH_TEST);
+		}
 	}
 
 	private void fillScreen(GL2 gl) {
@@ -292,6 +312,16 @@ public final class App
 			lightPos[0] = (float)x;
 			lightPos[1] = (float)y;
 			lightPos[2] = (float)z;
+		}
+
+		selectedItem = (selectedItem + input.cumulativeMouseTicks)%(items.length+1);
+		if (selectedItem < 0) selectedItem += items.length + 1;
+		input.cumulativeMouseTicks = 0;
+
+		if (input.mouseDown && selectedItem < items.length) {
+			items[selectedItem].pos[0] = (float)(x + Math.sin(input.yaw)*Math.cos(input.pitch)*3);
+			items[selectedItem].pos[1] = (float)(y + Math.sin(input.pitch)*3);
+			items[selectedItem].pos[2] = (float)(z + Math.cos(input.yaw)*Math.cos(input.pitch)*3);
 		}
 	}
 

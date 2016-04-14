@@ -4,7 +4,7 @@ import java.awt.event.*;
 import java.awt.Robot;
 import static java.awt.event.KeyEvent.*;
 
-public class InputHandler implements KeyListener, MouseMotionListener {
+public class InputHandler implements KeyListener, MouseListener, MouseWheelListener, MouseMotionListener {
 	private Robot			mouseBot;		//For keeping the cursor in-screen
 	public int			w;			// Canvas width
 	public int			h;			// Canvas height
@@ -19,6 +19,9 @@ public class InputHandler implements KeyListener, MouseMotionListener {
 
 	public boolean[]		actions = new boolean[2];
 	static final int[]		actionCodes = {VK_E, VK_Q};
+
+	public boolean mouseDown = false;
+	public int cumulativeMouseTicks = 0;
 
 	public InputHandler() {
 		try {
@@ -80,5 +83,17 @@ public class InputHandler implements KeyListener, MouseMotionListener {
 		else if (yaw < -Math.PI) yaw += Math.PI*2;
 	}
 
-	public void mouseDragged(MouseEvent e) {}
+	public void mouseDragged(MouseEvent e) {
+		mouseMoved(e);
+	}
+
+	public void mousePressed(MouseEvent e) {mouseDown = true;}
+	public void mouseReleased(MouseEvent e) {mouseDown = false;}
+	public void mouseClicked(MouseEvent e) {}
+	public void mouseEntered(MouseEvent e) {}
+	public void mouseExited(MouseEvent e) {mouseDown = false;}
+
+	public void mouseWheelMoved(MouseWheelEvent e) {
+		cumulativeMouseTicks += e.getWheelRotation();
+	}
 }
