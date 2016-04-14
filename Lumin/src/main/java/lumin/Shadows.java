@@ -7,10 +7,11 @@ import javax.media.opengl.*;
  * First, call shadowPrep<br/>
  * Then, render the faces of your shadow volume.<br/>
  * Call renderPrep<br/>
- * Re-render your scene with the lights off.<br/>
+ * Re-render your scene with the lights on.<br/>
  * Call cleanup<br/>
  */
 public final class Shadows {
+
 	static void shadowPrep(GL2 gl) {
 		//This is halfway through the space representable in 8 bits, so we've got a bit of space to move around in.
 		gl.glClearStencil(0x80);
@@ -31,16 +32,26 @@ public final class Shadows {
 		//If something's in the volume, we'll be able to see more front faces than back faces,
 		//and the net change will be negative.
 	}
-	static void renderPrep(GL2 gl) {
+
+	static void renderPrep(GL2 gl, boolean renderLights) {
 		gl.glColorMask(true, true, true, true);
 		//By default it's strictly <, which means it won't let us re-draw the same faces under new lighting.
 		gl.glDepthFunc(gl.GL_LEQUAL);
 		//Stop messing with the stencil buffer
 		gl.glStencilOp(gl.GL_KEEP, gl.GL_KEEP, gl.GL_KEEP);
-		//Only allow drawing in the areas that experienced a net negative change.
-		//This means 0x80 is GREATER than what's in the stencil buffer
-		gl.glStencilFunc(gl.GL_GREATER, 0x80, 0xff);
+		//renderLights true:
+			//Only allow drawing in the areas that did not experience a net negative change (Aren't shadowed)
+			//This means 0x80 is LESS or EQUAL to what's in the stencil buffer
+		//renderLights false:
+			//Want to draw in the shadowed areas (For pulses, e.g.)
+			//0x80 must be strictly > stencil buffer, since stencil must be decremented by shadow
+		gl.glStencilFunc(renderLights?gl.GL_LEQUAL:gl.GL_GREATER, 0x80, 0xff);
 	}
+
+	static void renderPrep(GL2 gl) {
+		renderPrep(gl, true);
+	}
+
 	static void cleanup(GL2 gl) {
 		//Put everything back the way it was
 		gl.glDepthMask(true);

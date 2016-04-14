@@ -189,16 +189,16 @@ public final class App
 	{
 		//Re-do this each time, since the modelview matrix might have changed
 		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, lightPos, 0);
-		//uhhh, this doesn't work, but should make a reddish object... 
+		//Set the specular reflectiveness of the materials
 		float mat[] = new float[4];
-		mat[0] = 0.727811f;
+		mat[0] = 0.626959f;
 		mat[1] = 0.626959f;
 		mat[2] = 0.626959f;
 		mat[3] = 1.0f;
 		gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SPECULAR, mat, 0);
 		gl.glMaterialf(GL.GL_FRONT, GL2.GL_SHININESS, 0.6f * 128.0f);
 
-		//SCENE RENDER ================================
+		//Scene render, lights off ================================
 		gl.glBegin(GL.GL_TRIANGLES);
 		//Note that our perspective is looking down the negative z axis by default.
 
@@ -220,9 +220,11 @@ public final class App
 		//gl.glColor3f(1, 0, 0);
 		//Shadows.renderShadowTri(gl, new float[] {3, 0, 2, 1, 0, 2, 2, -1, 2}, lightPos);
 
+        	gl.glDisable(GL2.GL_LIGHT0);
 		for (Item i : items) i.render(gl);
+        	gl.glEnable(GL2.GL_LIGHT0);
 
-		//SHADOW RENDER ================================
+		//Render Light 0 ================================
 		Shadows.shadowPrep(gl);
 		
 		for (Item i : items) i.renderShadow(gl, lightPos);
@@ -232,16 +234,20 @@ public final class App
 
 		Shadows.renderPrep(gl);
 
-        	gl.glDisable(GL2.GL_LIGHT0);
+		gl.glLightModelfv(gl.GL_LIGHT_MODEL_AMBIENT, new float[] {0, 0, 0, 1}, 0);
+		gl.glEnable(gl.GL_BLEND);
+		gl.glBlendFunc(gl.GL_ONE, gl.GL_ONE);
 		for (Item i : items) i.render(gl);
-        	gl.glEnable(GL2.GL_LIGHT0);
+		gl.glBlendFunc(gl.GL_ONE, gl.GL_ZERO);
+		gl.glDisable(gl.GL_BLEND);
+		gl.glLightModelfv(gl.GL_LIGHT_MODEL_AMBIENT, new float[] {0.2f, 0.2f, 0.2f, 1}, 0);
 
 		Shadows.cleanup(gl);
 
 		//PULSE RENDER ================================
 		Shadows.shadowPrep(gl);
 		for (Pulse p : pulses) p.render(gl);
-		Shadows.renderPrep(gl);
+		Shadows.renderPrep(gl, false);
 		gl.glColor4f(.5f, 1, .5f, 1);
 		fillScreen(gl);
 		Shadows.cleanup(gl);
