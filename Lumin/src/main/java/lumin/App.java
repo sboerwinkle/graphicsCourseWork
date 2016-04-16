@@ -20,7 +20,7 @@ public final class App
 	public static final Random	RANDOM = new Random();
 
 	// State (internal) variables
-	private int			k = 0;			// Just an animation counter
+	private double			phase = 0;		// Just an animation counter
 	private InputHandler		input;
 	private long			lastTime;		//For determining elapsed time
 	private GLJPanel		panel;
@@ -28,13 +28,14 @@ public final class App
 	//Player vars
 	private double			x, y, z;		// Position
 
-	//Position of the light source
-	private float[]			lightPos = {0, 0, -1, 1};
-
+	//A useful vector to have lying around
 	private float[]			zeroPt = {0, 0, 0, 1};
 
-	private Item[]			items;
-	private int			selectedItem; // If no item is selected, this is items.length
+	private ArrayList<Item>		items;
+	private ArrayList<Light>	lights;
+	private int			selectedThing; // If no item is selected, this is 0
+
+	private float[]			flashlightColor = {1, 1, 1, 1};
 
 	ArrayList<Pulse> pulses;
 
@@ -85,11 +86,14 @@ public final class App
 
 		pulses = new ArrayList<Pulse>();
 
-		items = new Item[3];
-		items[0] = new Cube(0, 0, 4.5, 1, new Color[] {Color.red, Color.green, Color.blue});
-		items[1] = new Cube(0, 0, 4.5, 5, new Color[] {Color.white, Color.white, Color.white});
-		items[2] = new Sphere(2.5, 0, 4.5, 1, Color.green);
-		selectedItem = items.length;
+		items = new ArrayList<Item>();
+		items.add(new Cube(0, 0, 4.5, 5, new Color[] {Color.white, Color.white, Color.white}));
+		items.add(new Cube(0, 0, 4.5, 1, new Color[] {Color.red, Color.green, Color.blue}));
+		items.add(new Sphere(2.5, 0, 4.5, 1, Color.green));
+		lights = new ArrayList<Light>(); // Aah let people add lights ore somthing
+		lights.add(new Light(0, 0, 0));
+		lights.add(new Light(0, 0, 6));
+		selectedThing = 0;
 	}
 
 	//**********************************************************************
@@ -105,26 +109,26 @@ public final class App
 		gl.glEnable(gl.GL_COLOR_MATERIAL);
 
 		//do some lighting and fog. I actually have very little understanding about what is happening here
-        float local_view[] = { 0.0f };
-        //gl.glLightModelfv(GL2.GL_LIGHT_MODEL_LOCAL_VIEWER, local_view, 0);
+		float local_view[] = { 0.0f };
+		//gl.glLightModelfv(GL2.GL_LIGHT_MODEL_LOCAL_VIEWER, local_view, 0);
 
-        gl.glFrontFace(GL.GL_CW);
-        gl.glEnable(GL2.GL_LIGHTING);
-        gl.glEnable(GL2.GL_LIGHT0);
-        gl.glEnable(GL2.GL_AUTO_NORMAL);
-        gl.glEnable(GL2.GL_NORMALIZE);
+		gl.glFrontFace(GL.GL_CW);
+		gl.glEnable(GL2.GL_LIGHTING);
+		gl.glEnable(GL2.GL_LIGHT0);
+		gl.glEnable(GL2.GL_AUTO_NORMAL);
+		gl.glEnable(GL2.GL_NORMALIZE);
 
-        /*gl.glEnable(GL2.GL_FOG);
-        {
-            float fogColor[] = { 0.5f, 0.5f, 0.5f, .8f };
+		/*gl.glEnable(GL2.GL_FOG);
+		{
+		    float fogColor[] = { 0.5f, 0.5f, 0.5f, .8f };
 
-            gl.glFogi(GL2.GL_FOG_MODE, GL2.GL_EXP);
-            gl.glFogfv(GL2.GL_FOG_COLOR, fogColor, 0);
-            gl.glFogf(GL2.GL_FOG_DENSITY, 0.35f);
-            gl.glHint(GL2.GL_FOG_HINT, GL.GL_DONT_CARE);
+		    gl.glFogi(GL2.GL_FOG_MODE, GL2.GL_EXP);
+		    gl.glFogfv(GL2.GL_FOG_COLOR, fogColor, 0);
+		    gl.glFogf(GL2.GL_FOG_DENSITY, 0.35f);
+		    gl.glHint(GL2.GL_FOG_HINT, GL.GL_DONT_CARE);
 
-            gl.glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-        }*/
+		    gl.glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+		}*/
 
 		//We're affecting the projection matrix
 		//(The one that turns world coordinates into screen coordinates)
@@ -164,6 +168,8 @@ public final class App
 		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_SPOT_CUTOFF, 90);
 		//Turn off glare on the flashlight, it's distracting
 		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_SPECULAR, zeroPt, 0);
+		//Set the color...
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_DIFFUSE, flashlightColor, 0);
 
 		double cosP = Math.cos(input.pitch);
 		double sinP = Math.sin(input.pitch);
@@ -222,38 +228,28 @@ public final class App
 
 		gl.glEnd();
 
+		//Enable default ambient lighting (plus the flashlight) for the first, unoccluded render.
+		gl.glLightModelfv(gl.GL_LIGHT_MODEL_AMBIENT, new float[] {0.2f, 0.2f, 0.2f, 1}, 0);
 		for (Item i : items) i.render(gl);
+		gl.glLightModelfv(gl.GL_LIGHT_MODEL_AMBIENT, zeroPt, 0);
 
-		//Render Light 0 ================================
-		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, lightPos, 0);
-		/*//Things are simpler to make pretty if this light doesn't attenuate with distance
+		//Render lighting from point light s================================
+		gl.glEnable(gl.GL_BLEND);
+		gl.glBlendFunc(gl.GL_ONE, gl.GL_ONE); // Just add colors
+
+		/*
+		//Things are simpler to make pretty if this light doesn't attenuate with distance
 		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_QUADRATIC_ATTENUATION, 0);
-		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_CONSTANT_ATTENUATION, 1);*/
+		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_CONSTANT_ATTENUATION, 1);
+		*/
+
 		//Point lights are not spot lights
 		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_SPOT_CUTOFF, 180);
-		//Point lights have regular glare
-		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_SPECULAR, new float[] {1, 1, 1, 1}, 0);
 
-		Shadows.shadowPrep(gl);
-		
-		for (Item i : items) i.renderShadow(gl, lightPos);
-		//gl.glColor3f(0, 1, 0);
-		//Shadows.renderShadowTri(gl, new float[] {1,1,3.5f,-1,1,3.5f,-1,-1,3.5f}, lightPos);
-		//items[0].renderShadow(gl, lightPos);
-
-		Shadows.renderPrep(gl);
-
-		gl.glLightModelfv(gl.GL_LIGHT_MODEL_AMBIENT, zeroPt, 0);
-		gl.glEnable(gl.GL_BLEND);
-		gl.glBlendFunc(gl.GL_ONE, gl.GL_ONE);
-		for (Item i : items) i.render(gl);
-		gl.glBlendFunc(gl.GL_ONE, gl.GL_ZERO);
-		gl.glDisable(gl.GL_BLEND);
-		gl.glLightModelfv(gl.GL_LIGHT_MODEL_AMBIENT, new float[] {0.2f, 0.2f, 0.2f, 1}, 0);
-
-		Shadows.cleanup(gl);
+		for (Light l : lights) l.render(gl, items);
 
 		//PULSE RENDER ================================
+		gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA);
 		Shadows.shadowPrep(gl);
 		for (Pulse p : pulses) p.render(gl);
 		Shadows.renderPrep(gl, false);
@@ -262,21 +258,27 @@ public final class App
 		Shadows.cleanup(gl);
 
 		//SELECTION RENDER ================================
-		if (selectedItem < items.length) {
+		if (selectedThing != 0) {
 			gl.glDisable(gl.GL_DEPTH_TEST);
 			gl.glDisable(gl.GL_LIGHTING);
 			gl.glPointSize(5);
 			gl.glBegin(gl.GL_POINTS);
-			gl.glColor3f(1, (float)Math.abs(Math.cos(input.pitch)), (float)Math.abs(Math.sin(input.yaw)));
-			gl.glVertex3fv(items[selectedItem].pos, 0);
+			float value = (float)Math.abs(Math.cos(phase));
+			gl.glColor3f(value, value, value);
+			if (selectedThing < items.size()) {
+				gl.glVertex3fv(items.get(selectedThing).pos, 0);
+			} else {
+				gl.glVertex3fv(lights.get(selectedThing-items.size()).pos, 0);
+			}
 			gl.glEnd();
 			gl.glEnable(gl.GL_LIGHTING);
 			gl.glEnable(gl.GL_DEPTH_TEST);
 		}
+		gl.glBlendFunc(gl.GL_ONE, gl.GL_ZERO);
+		gl.glDisable(gl.GL_BLEND);
 	}
 
 	private void fillScreen(GL2 gl) {
-		gl.glEnable(gl.GL_BLEND);
 		gl.glDisable(gl.GL_LIGHTING);
 		//We want to cover the whole screen, so depth test is balogna
 		gl.glDisable(gl.GL_DEPTH_TEST);
@@ -285,8 +287,6 @@ public final class App
 		gl.glPushMatrix();
 		gl.glLoadIdentity();
 
-		//To get the result color, take 0*(color we're painting) + (alpha specified above)*(color already there)
-		gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA);
 		gl.glBegin(GL.GL_TRIANGLE_STRIP);
 		gl.glVertex3d(1, 1, -1);
 		gl.glVertex3d(1, -1, -1);
@@ -295,16 +295,16 @@ public final class App
 		gl.glEnd();
 
 		//Undo my changes
-		gl.glBlendFunc(gl.GL_ONE, gl.GL_ZERO);
 		gl.glPopMatrix();
 		gl.glEnable(gl.GL_DEPTH_TEST);
 		gl.glEnable(gl.GL_LIGHTING);
-		gl.glDisable(gl.GL_BLEND);
 	}
 
 	//Does the actions that need to happen once per tick
 	private void tick(int nanos) {
 		double mvmnt = nanos/(double)1e9;
+		phase += 3*mvmnt;
+		if (phase > Math.PI*2) phase -= Math.PI*2;
 		double cosY = mvmnt*Math.cos(input.yaw);
 		double sinY = mvmnt*Math.sin(input.yaw);
 		z += cosY*input.getVec(0)-sinY*input.getVec(1);
@@ -318,21 +318,35 @@ public final class App
 			input.actions[0] = false;
 			pulses.add(new Pulse(x, y, z));
 		}
-		if (input.actions[1]) {
-			input.actions[1] = false;
-			lightPos[0] = (float)x;
-			lightPos[1] = (float)y;
-			lightPos[2] = (float)z;
+
+		//Set the color of the selected light, or our flashlight.
+		float[] lightColor;
+		if (selectedThing < items.size()) lightColor = flashlightColor;
+		else lightColor = lights.get(selectedThing-items.size()).color;
+		for (int i = 0; i < 3; i++) {
+			int v = input.getVec(3+i);
+			if (v == 0) continue;
+			lightColor[i] = (v+1)/2;
 		}
 
-		selectedItem = (selectedItem + input.cumulativeMouseTicks)%(items.length+1);
-		if (selectedItem < 0) selectedItem += items.length + 1;
+		//Switch the selected thing
+		selectedThing = (selectedThing + input.cumulativeMouseTicks)%(items.size()+lights.size());
+		if (selectedThing < 0) selectedThing += items.size()+lights.size();
 		input.cumulativeMouseTicks = 0;
 
-		if (input.mouseDown && selectedItem < items.length) {
-			items[selectedItem].pos[0] = (float)(x + Math.sin(input.yaw)*Math.cos(input.pitch)*3);
-			items[selectedItem].pos[1] = (float)(y + Math.sin(input.pitch)*3);
-			items[selectedItem].pos[2] = (float)(z + Math.cos(input.yaw)*Math.cos(input.pitch)*3);
+		//Move the selected thing to be in front of us
+		if (input.mouseDown && selectedThing != 0) {
+			if (selectedThing < items.size()) {
+				Item i = items.get(selectedThing);
+				i.pos[0] = (float)(x + Math.sin(input.yaw)*Math.cos(input.pitch)*3);
+				i.pos[1] = (float)(y + Math.sin(input.pitch)*3);
+				i.pos[2] = (float)(z + Math.cos(input.yaw)*Math.cos(input.pitch)*3);
+			} else {
+				Light l = lights.get(selectedThing - items.size());
+				l.pos[0] = (float)(x + Math.sin(input.yaw)*Math.cos(input.pitch)*3);
+				l.pos[1] = (float)(y + Math.sin(input.pitch)*3);
+				l.pos[2] = (float)(z + Math.cos(input.yaw)*Math.cos(input.pitch)*3);
+			}
 		}
 	}
 

@@ -9,10 +9,12 @@ public class InputHandler implements KeyListener, MouseListener, MouseWheelListe
 	public int			w;			// Canvas width
 	public int			h;			// Canvas height
 	public int			frameX, frameY;		// Canvas location
-	public boolean[]		keys = new boolean[6];
+	public boolean[]		keys = new boolean[12];
 	static final int[]		moveCodes =
 	//Movement keys
-		{VK_S, VK_W, VK_D, VK_A, VK_SHIFT, VK_SPACE};
+		{VK_S, VK_W, VK_D, VK_A, VK_SHIFT, VK_SPACE,
+	//Flashlight keys : R, G, B
+		 VK_J, VK_U, VK_K, VK_I, VK_L, VK_O};
 	public double pitch, yaw;
 
 	public boolean[]		actions = new boolean[2];

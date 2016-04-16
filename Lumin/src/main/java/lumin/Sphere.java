@@ -21,17 +21,17 @@ public final class Sphere extends Item {
 	}
 
 	float r;
-	Color c;
+	float[] color;
 	Sphere(double X, double Y, double Z, double R, Color C) {
 		super(X, Y, Z);
 		r = (float) R;
-		c = C;
+		color = new float[] {C.getRed()/255f, C.getGreen()/255f, C.getBlue()/255f};
 	}
 	/**
 	 * Draws a sphere centered at (x, y, z) with radius r.
 	 */
 	public void render(GL2 gl) {
-		gl.glColor3f(c.getRed()/255f, c.getGreen()/255f, c.getBlue()/255f);
+		gl.glColor3fv(color, 0);
 		for (int elev = 0; elev < SIDES/2; elev++) {
 			double r1 = r * v2s[elev];
 			double r2 = r * v2s[elev+1];
