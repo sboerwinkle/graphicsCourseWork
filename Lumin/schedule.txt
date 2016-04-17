@@ -2,22 +2,25 @@ Date		What should be accomplished			Accomplished?		Claimed by...
 
 2/23		hard-coded 3D environment			Yes
 3/1		environment navigable				Yes
-3/1		Light sources					Maybe			<Needed>
-3/15		Correct display of colored objects		Maybe			<Needed>
+3/1		Light sources					Yes
+3/15		Correct display of colored objects		Yes
 		under colored lighting
-3/22		Player flashlight, changeable color		No			Simon
+3/22		Player flashlight, changeable color		Yes			Simon
 3/22		Ryan - Spectrally decompose incoming light	No?			Ryan
-3/22		Simon - Initial version of echo			Yes
+3/22		Simon - Initial version of echo			Yes			Simon
 3/22		Adam - Particle clouds				No?			Adam
 3/29		Complete collection of objects for		No			<Needed>
 		environment
 4/5		3D environment from config file			No			<Needed>
 4/5		Ryan - bend outgoing decomposed light		No			Ryan
-4/5		Simon - Spherical expansion and			Roughly			Simon
+4/5		Simon - Spherical expansion and			Yes			Simon
 		occlusion for echo
 		Adam - Hazy/Other Translucent			No			Adam
 		Materials
 
-???		Player can position objects, light sources	No			Simon
+???		Player can position objects, light sources	Yes			Simon
+???		Finer control of position, color		Necessary?
+???		Fix bug - lights very near objects
+		produce shallow shadows
 ===Where we should be presently===
 3 wks at end for overflow, bug testing, final report
