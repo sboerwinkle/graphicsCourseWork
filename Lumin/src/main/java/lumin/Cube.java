@@ -35,7 +35,7 @@ public final class Cube extends Item {
 					data[dim] += dz;
 					data[(dim+1)%3] += dz*dxs[c];
 					data[(dim+2)%3] += r*dys[c];
-					gl.glColor3f(col.getRed()/255f, col.getGreen()/255f, col.getBlue()/255f);
+					gl.glColor4f(col.getRed()/255f, col.getGreen()/255f, col.getBlue()/255f, col.getAlpha()/255f);
 					gl.glVertex3fv(data, 0);
 				}
 			}

@@ -34,8 +34,9 @@ public final class App
 	private ArrayList<Item>		items;
 	private ArrayList<Light>	lights;
 	private int			selectedThing; // If no item is selected, this is 0
+	private ArrayList<Haze>	hazes;
 
-	private float[]			flashlightColor = {1, 1, 1, 1};
+	private float[]			flashlightColor = {1f, 1f, 1f, 1f};
 
 	ArrayList<Pulse> pulses;
 
@@ -87,12 +88,17 @@ public final class App
 		pulses = new ArrayList<Pulse>();
 
 		items = new ArrayList<Item>();
-		items.add(new Cube(0, 0, 4.5, 5, new Color[] {Color.white, Color.white, Color.white}));
+		
 		items.add(new Cube(0, 0, 4.5, 1, new Color[] {Color.red, Color.green, Color.blue}));
 		items.add(new Sphere(2.5, 0, 4.5, 1, Color.green));
 		lights = new ArrayList<Light>(); // Aah let people add lights ore somthing
 		lights.add(new Light(0, 0, 0));
 		lights.add(new Light(0, 0, 6));
+		items.add(new Cube(0, 0, 4.5, 10, new Color[] {new Color(.66f, .13f, .9f, .8f)}));	//purplish
+
+
+		hazes = new ArrayList<Haze>();	
+		hazes.add(new Haze(new double[]{3, 0, 1}, 2, new Color(.75f, .75f, .75f, .0065f), .080));
 		selectedThing = 0;
 	}
 
@@ -117,18 +123,22 @@ public final class App
 		gl.glEnable(GL2.GL_LIGHT0);
 		gl.glEnable(GL2.GL_AUTO_NORMAL);
 		gl.glEnable(GL2.GL_NORMALIZE);
+		gl.glEnable (GL2.GL_BLEND);
+		gl.glBlendFunc (GL2.GL_SRC_ALPHA, GL2.GL_ONE_MINUS_SRC_ALPHA);
 
-		/*gl.glEnable(GL2.GL_FOG);
+		gl.glEnable(GL2.GL_FOG);
 		{
-		    float fogColor[] = { 0.5f, 0.5f, 0.5f, .8f };
+		    float fogColor[] = { 0.65f, 0.65f, 0.65f, .01f };
+		    //float fogColor[] = { 0.5f, 0.5f, 0.5f, .025f };		//this one is pretty good as well
 
-		    gl.glFogi(GL2.GL_FOG_MODE, GL2.GL_EXP);
+		    gl.glFogi(GL2.GL_FOG_MODE, GL2.GL_LINEAR);
 		    gl.glFogfv(GL2.GL_FOG_COLOR, fogColor, 0);
-		    gl.glFogf(GL2.GL_FOG_DENSITY, 0.35f);
-		    gl.glHint(GL2.GL_FOG_HINT, GL.GL_DONT_CARE);
+		    gl.glFogf(GL2.GL_FOG_DENSITY, 0.8f);
+		    gl.glHint(GL2.GL_FOG_HINT, GL.GL_NICEST);
+		    gl.glFogi(GL2.GL_FOG_COORD_SRC, GL2.GL_FOG_COORD);
 
-		    gl.glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-		}*/
+		    gl.glClearColor(0f, 0f, 0f, 1f);
+		}
 
 		//We're affecting the projection matrix
 		//(The one that turns world coordinates into screen coordinates)
@@ -142,7 +152,7 @@ public final class App
 		//The lower the ratio zFar/zNear is. Also zNear can't be 0.
 		GLU.gluPerspective(90, 1, 0.1, 40);
 
-		System.out.println(gl.glGetString(GL2.GL_SHADING_LANGUAGE_VERSION));
+		gl.glFogCoordf(0f);			//closer to 1 this is set, the more foggy what is drawn will appear
 	}
 
 	public void		dispose(GLAutoDrawable drawable)
@@ -162,12 +172,12 @@ public final class App
 		//Set up the flashlight here, since we don't want it transformed by the modelview matrix.
 		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, zeroPt, 0);
 		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_CONSTANT_ATTENUATION, 0);
-		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_QUADRATIC_ATTENUATION, 1);
+		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_QUADRATIC_ATTENUATION, .5F);
 		//Make the flashlight a spot light
-		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_SPOT_EXPONENT, 3);
-		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_SPOT_CUTOFF, 90);
+		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_SPOT_EXPONENT, 2);
+		gl.glLightf(GL2.GL_LIGHT0, GL2.GL_SPOT_CUTOFF, 60);
 		//Turn off glare on the flashlight, it's distracting
-		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_SPECULAR, zeroPt, 0);
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_SPECULAR, new float[] {1f, 1f, 1f, .5f}, 0);
 		//Set the color...
 		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_DIFFUSE, flashlightColor, 0);
 
@@ -210,17 +220,28 @@ public final class App
 		gl.glMaterialf(GL.GL_FRONT, GL2.GL_SHININESS, 0.6f * 128.0f);
 
 		//Scene render, lights off ================================
+
+
+		gl.glFogCoordf(0f);
+		gl.glEnable (GL2.GL_BLEND);
+		gl.glBlendFunc (GL2.GL_SRC_ALPHA, GL2.GL_ONE_MINUS_SRC_ALPHA);
+		//Enable default ambient lighting (plus the flashlight) for the first, unoccluded render.
+		gl.glLightModelfv(gl.GL_LIGHT_MODEL_AMBIENT, new float[] {0.3f, 0.3f, 0.3f, .25f}, 0);
+		gl.glEnable(gl.GL_DEPTH_TEST);
+		for (Item i : items) i.render(gl);
+
 		gl.glBegin(GL.GL_TRIANGLES);
 		//Note that our perspective is looking down the negative z axis by default.
 
+		//gl.glFogCoordf(1f);
 		//White triangle up
 		gl.glNormal3f(0, 0, -1);
-		gl.glColor3f(1.0f, 1.0f, 1.0f);
+		gl.glColor4f(1.0f, 1.0f, 1.0f, .75f);
 		gl.glVertex3d(1, 0, 3);
 		gl.glVertex3d(-1, 0, 3);
 		gl.glVertex3d(0, 1, 3);
 		//Reddish triangle down
-		gl.glColor3f(1.0f, 0, 0);
+		gl.glColor4f(1.0f, 0f, 0f, .75f);
 		gl.glVertex3d(1, 0, 3);
 		gl.glVertex3d(-1, 0, 3);
 		gl.glVertex3d(0, -1, 3);
@@ -228,11 +249,18 @@ public final class App
 
 		gl.glEnd();
 
-		//Enable default ambient lighting (plus the flashlight) for the first, unoccluded render.
-		gl.glLightModelfv(gl.GL_LIGHT_MODEL_AMBIENT, new float[] {0.2f, 0.2f, 0.2f, 1}, 0);
-		for (Item i : items) i.render(gl);
+		for (Haze i : hazes){
+			i.render(gl);
+		}
 		gl.glLightModelfv(gl.GL_LIGHT_MODEL_AMBIENT, zeroPt, 0);
 
+		
+
+
+		//draw transparent things last
+		
+
+		gl.glFogCoordf(0f);
 		//Render lighting from point light s================================
 		gl.glEnable(gl.GL_BLEND);
 		gl.glBlendFunc(gl.GL_ONE, gl.GL_ONE); // Just add colors
@@ -276,6 +304,8 @@ public final class App
 		}
 		gl.glBlendFunc(gl.GL_ONE, gl.GL_ZERO);
 		gl.glDisable(gl.GL_BLEND);
+
+		
 	}
 
 	private void fillScreen(GL2 gl) {
@@ -348,6 +378,12 @@ public final class App
 				l.pos[2] = (float)(z + Math.cos(input.yaw)*Math.cos(input.pitch)*3);
 			}
 		}
+	}
+
+	private void renderHallway(GL2 gl){
+		gl.glColor3f(1f, 1f, 1f);
+
+
 	}
 
 	// This example on this page is long but helpful:
