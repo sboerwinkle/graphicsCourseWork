@@ -1,5 +1,6 @@
 package lumin;
 
+import java.io.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
@@ -11,6 +12,8 @@ import javax.media.opengl.awt.GLJPanel;
 import javax.media.opengl.glu.*;
 import com.jogamp.opengl.util.*;
 import com.jogamp.opengl.util.gl2.GLUT;
+import com.jogamp.opengl.util.texture.TextureIO;
+import com.jogamp.opengl.util.texture.Texture;
 
 public final class App
 	implements GLEventListener
@@ -32,6 +35,7 @@ public final class App
 	private float[]			zeroPt = {0, 0, 0, 1};
 
 	private ArrayList<Item>		items;
+	private ArrayList<Item>		diamonds;
 	private ArrayList<Light>	lights;
 	private int			selectedThing; // If no item is selected, this is 0
 	private ArrayList<Haze>	hazes;
@@ -39,6 +43,9 @@ public final class App
 	private float[]			flashlightColor = {1f, 1f, 1f, 1f};
 
 	ArrayList<Pulse> pulses;
+
+	Texture	bricks;
+	Texture concrete;
 
 	//**********************************************************************
 	// App
@@ -89,16 +96,27 @@ public final class App
 
 		items = new ArrayList<Item>();
 		
-		items.add(new Cube(0, 0, 4.5, 1, new Color[] {Color.red, Color.green, Color.blue}));
-		items.add(new Sphere(2.5, 0, 4.5, 1, Color.green));
+		items.add(new Cube(0, 0, 10, 1, new Color[] {Color.blue, Color.green, Color.red}));
+		items.add(new Sphere(0, 0, -10, 1, Color.green));
+		items.add(new Sphere(4, -.5, 0, .5, Color.black));
+		items.add(new Sphere(4, +.5, 0, .5, Color.white));
+		items.add(new Sphere(4, 0, -.5, .5, Color.red));
+		items.add(new Sphere(3.5, 0, 0, .5, Color.yellow));
+		items.add(new Sphere(4, 0, +.5, .5, Color.blue));
+		items.add(new Sphere(4.5, 0, 0, .5, Color.green));
+
+		diamonds = new ArrayList<Item>();
+
+		diamonds.add(new Cube(0, 0, 0, .75, new Color[] {new Color(185/256.0f, 242/256.0f, 1.0f, .75f)}));
+
 		lights = new ArrayList<Light>(); // Aah let people add lights ore somthing
 		lights.add(new Light(0, 0, 0));
 		lights.add(new Light(0, 0, 6));
-		items.add(new Cube(0, 0, 4.5, 10, new Color[] {new Color(.66f, .13f, .9f, .8f)}));	//purplish
+		//items.add(new Cube(0, 0, 4.5, 10, new Color[] {new Color(.66f, .13f, .9f, .8f)}));	//purplish
 
 
 		hazes = new ArrayList<Haze>();	
-		hazes.add(new Haze(new double[]{3, 0, 1}, 2, new Color(.75f, .75f, .75f, .0065f), .080));
+		hazes.add(new Haze(new double[]{0, 0, 0}, 2, new Color(.75f, .75f, .75f, .0065f), .080));
 		selectedThing = 0;
 	}
 
@@ -153,6 +171,21 @@ public final class App
 		GLU.gluPerspective(90, 1, 0.1, 40);
 
 		gl.glFogCoordf(0f);			//closer to 1 this is set, the more foggy what is drawn will appear
+
+		File f = new File("C:\\Users\\Rayne\\Google Drive\\Graphics\\graphicsCourseWork\\Lumin\\src\\main\\java\\lumin\\bricks.bmp");
+		File g = new File("C:\\Users\\Rayne\\Google Drive\\Graphics\\graphicsCourseWork\\Lumin\\src\\main\\java\\lumin\\concrete.jpg");
+		
+		try{bricks = TextureIO.newTexture(f, true);}
+		catch (IOException e){
+			System.out.println("Didn't work.");
+		}
+
+		try{concrete = TextureIO.newTexture(g, true);}
+		catch (IOException e){
+			System.out.println("Didn't work.");
+		}
+
+		
 	}
 
 	public void		dispose(GLAutoDrawable drawable)
@@ -228,24 +261,37 @@ public final class App
 		//Enable default ambient lighting (plus the flashlight) for the first, unoccluded render.
 		gl.glLightModelfv(gl.GL_LIGHT_MODEL_AMBIENT, new float[] {0.3f, 0.3f, 0.3f, .25f}, 0);
 		gl.glEnable(gl.GL_DEPTH_TEST);
+
+		renderHallway(gl);
+
 		for (Item i : items) i.render(gl);
+
+		gl.glPushMatrix();
+		gl.glTranslated(-4, 0, -0);
+		gl.glRotated(45, 0,1,0);
+		gl.glRotated(45, 1, 0, 0);
+		
+
+		for (Item d : diamonds) d.render(gl);
+
+		gl.glPopMatrix();
 
 		gl.glBegin(GL.GL_TRIANGLES);
 		//Note that our perspective is looking down the negative z axis by default.
 
-		//gl.glFogCoordf(1f);
-		//White triangle up
-		gl.glNormal3f(0, 0, -1);
-		gl.glColor4f(1.0f, 1.0f, 1.0f, .75f);
-		gl.glVertex3d(1, 0, 3);
-		gl.glVertex3d(-1, 0, 3);
-		gl.glVertex3d(0, 1, 3);
-		//Reddish triangle down
-		gl.glColor4f(1.0f, 0f, 0f, .75f);
-		gl.glVertex3d(1, 0, 3);
-		gl.glVertex3d(-1, 0, 3);
-		gl.glVertex3d(0, -1, 3);
-		//gl.glPopMatrix();
+		// //gl.glFogCoordf(1f);
+		// //White triangle up
+		// gl.glNormal3f(-1, 0, 0);
+		// gl.glColor4f(1.0f, 1.0f, 1.0f, .75f);
+		// gl.glVertex3d(1, 0, 3);
+		// gl.glVertex3d(-1, 0, 3);
+		// gl.glVertex3d(0, 1, 3);
+		// //Reddish triangle down
+		// gl.glColor4f(1.0f, 0f, 0f, .75f);
+		// gl.glVertex3d(1, 0, 3);
+		// gl.glVertex3d(-1, 0, 3);
+		// gl.glVertex3d(0, -1, 3);
+		// //gl.glPopMatrix();
 
 		gl.glEnd();
 
@@ -381,9 +427,73 @@ public final class App
 	}
 
 	private void renderHallway(GL2 gl){
+		bricks.bind(gl);
+
+		bricks.setTexParameteri(gl, GL.GL_TEXTURE_WRAP_S, GL.GL_REPEAT);
+		bricks.setTexParameteri(gl, GL.GL_TEXTURE_WRAP_T, GL.GL_REPEAT);
+
+		bricks.enable(gl);
+
 		gl.glColor3f(1f, 1f, 1f);
 
+		double x = 3;
+		double y = -2;
+		double z = -13;
 
+		texWall(gl, x, y, z, 0, 5, 10);
+		texWall(gl, x, y, z+10, 3, 5, 0);
+		texWall(gl, x+3, y, z+10, 0, 5, 6);
+		texWall(gl, x+3, y, z+16, -3, 5, 0);
+		texWall(gl, x, y, z+16, 0, 5, 10);
+		texWall(gl, x, y, z+26, -6, 5, 0);
+
+		texWall(gl, x-6, y, z+26, 0, 5, -10);
+		texWall(gl, x-6, y, z+16, -3, 5, 0);
+		texWall(gl, x-9, y, z+16, 0, 5, -6);
+		texWall(gl, x-9, y, z+10, +3, 5, 0);
+		texWall(gl, x-6, y, z+10, 0, 5, -10);
+		texWall(gl, x-6, y, z, +6, 5, 0);
+
+		bricks.disable(gl);
+
+		concrete.bind(gl);
+
+		concrete.setTexParameteri(gl, GL.GL_TEXTURE_WRAP_S, GL.GL_REPEAT);
+		concrete.setTexParameteri(gl, GL.GL_TEXTURE_WRAP_T, GL.GL_REPEAT);
+
+		concrete.enable(gl);
+
+		texFloor(gl, x+3, y, z, -12, 0, 26);
+		//texFloor(gl, x, y, z, -6, 0, 20);
+
+		concrete.disable(gl);
+
+	}
+
+	private void texWall(GL2 gl, double x, double y, double z, double dx, double dy, double dz){
+		gl.glBegin(GL2.GL_QUADS);
+		gl.glTexCoord2d(0,0);
+		gl.glVertex3d(x, y, z);
+		gl.glTexCoord2d(Math.sqrt(Math.pow(dz,2) + Math.pow(dx, 2)),0);
+		gl.glVertex3d(x+dx, y, z+dz);
+		gl.glTexCoord2d(Math.sqrt(Math.pow(dz,2) + Math.pow(dx, 2)),dy);
+		gl.glVertex3d(x+dx, y + dy, z + dz);
+		gl.glTexCoord2d(0,dy);
+		gl.glVertex3d(x, y+dy, z);
+		gl.glEnd();
+	}
+
+	private void texFloor(GL2 gl, double x, double y, double z, double dx, double dy, double dz){
+		gl.glBegin(GL2.GL_QUADS);
+		gl.glTexCoord2d(0,0);
+		gl.glVertex3d(x, y, z);
+		gl.glTexCoord2d(dz,0);
+		gl.glVertex3d(x, y, z+dz);
+		gl.glTexCoord2d(dz, dx);
+		gl.glVertex3d(x+dx, y, z+dz);
+		gl.glTexCoord2d(0,dx);
+		gl.glVertex3d(x+dx, y, z);
+		gl.glEnd();
 	}
 
 	// This example on this page is long but helpful:
