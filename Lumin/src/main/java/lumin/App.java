@@ -5,6 +5,7 @@ import java.awt.event.*;
 import java.awt.geom.*;
 import java.util.ArrayList;
 import java.util.Random;
+import java.nio.FloatBuffer;
 import javax.swing.*;
 import javax.media.opengl.*;
 import javax.media.opengl.awt.GLJPanel;
@@ -39,6 +40,16 @@ public final class App
 	private float[]			flashlightColor = {1f, 1f, 1f, 1f};
 
 	ArrayList<Pulse> pulses;
+
+	//These are for use with the shaders
+	ShaderControl shaderControl;
+	CubeMapFramebuffer cubeMapFB;
+	float[] projMatrix;
+	float[] modelMatrix;
+	float[] viewMatrix;
+
+	int vbo, vao;
+	int cameraPosLoc, cubeMapLoc, projLoc, modelLoc, viewLoc;
 
 	//**********************************************************************
 	// App
@@ -114,6 +125,16 @@ public final class App
 		gl.glEnable(gl.GL_DEPTH_TEST);
 		gl.glEnable(gl.GL_COLOR_MATERIAL);
 
+		shaderControl = new ShaderControl();
+		//Put the shader scripts in the main folder, with the build/ and src/ directories
+		shaderControl.vSource = shaderControl.loadShader("../../../../vxShader.txt");
+		shaderControl.fSource = shaderControl.loadShader("../../../../fgShader.txt");
+		shaderControl.init(gl);
+
+		cubeMapFB = new CubeMapFramebuffer();
+
+		cubeMapFB.init(gl, 256, 256);
+
 		//do some lighting and fog. I actually have very little understanding about what is happening here
 		float local_view[] = { 0.0f };
 		//gl.glLightModelfv(GL2.GL_LIGHT_MODEL_LOCAL_VIEWER, local_view, 0);
@@ -151,9 +172,82 @@ public final class App
 		//Note that you get slightly better occlusion accuracy (I'm pretty sure)
 		//The lower the ratio zFar/zNear is. Also zNear can't be 0.
 		GLU.gluPerspective(90, 1, 0.1, 40);
+		projMatrix = Matrix.perspective(90.0f, 1.0f, 0.1f, 40.0f);
+		modelMatrix = Matrix.identity();
+
+		//We generate one vertex array object, to store the one vertex buffer object we will make
+		int[] vaAddr = new int[1];
+		//Generate a name address for the vao
+		gl.glGenVertexArrays(1, vaAddr, 0);
+		vao = vaAddr[0];
+		//Bind the vao to the current context.
+		gl.glBindVertexArray(vao);
+
+		// We COULD use two vbos here, one for the vertices and one for the normals,
+		// but as it turns out, we've stored all of the information into a single 
+		// array of floats, so it is more convenient to use stride and offset with
+		// glVertexAttribPointer.
+		int[] vbAddr = new int[1];
+		gl.glGenBuffers(1, vbAddr, 0);
+		vbo = vbAddr[0];
+
+		FloatBuffer ptsBuffer = FloatBuffer.wrap(cubeVerts);
+
+
+
+		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo);
+		gl.glEnableVertexAttribArray(0); //Position
+		gl.glEnableVertexAttribArray(1); //Normal
+		// configure the attribute pointers, with the appropriate stride and offset so that it can process the vertexes of the cube as well as the normals.
+		gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, false, 4 * 6, 0);
+		gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, false, 4 * 6, 12);
+		gl.glBufferData(gl.GL_ARRAY_BUFFER, 6 * 36 * 4, ptsBuffer, gl.GL_STATIC_DRAW);
+
+		//Unbind our VAO
+		gl.glBindVertexArray(0);
+		
+
+		//Obtain the locations for uniform variables in our linked program code
+		shaderControl.useShader(gl);
+
+		
+		int prgId = shaderControl.getId();
+
+		cameraPosLoc= gl.glGetUniformLocation(prgId, "cameraPos");
+		cubeMapLoc= gl.glGetUniformLocation(prgId, "cubeMap");
+		modelLoc = gl.glGetUniformLocation(prgId, "model");
+		viewLoc = gl.glGetUniformLocation(prgId, "view");
+		projLoc = gl.glGetUniformLocation(prgId, "projection");
+
+		gl.glUniformMatrix4fv(modelLoc, 1, false, modelMatrix, 0);
+		gl.glUniformMatrix4fv(projLoc, 1, false, projMatrix, 0);
+
+		shaderControl.dontUseShader(gl);
+		
+		// I'm not even sure if this works properly...
+		//updateCubeMap(drawable);
+		
 
 		gl.glFogCoordf(0f);			//closer to 1 this is set, the more foggy what is drawn will appear
+		//Print out version info
+		System.out.println("Shading lang version: " + gl.glGetString(GL2.GL_SHADING_LANGUAGE_VERSION));
+		System.out.println("OpenGL version: " + gl.glGetString(gl.GL_VERSION));
+		
 	}
+	//Should render the scene 6 times at each of the six directions outward from the cube.
+	public void updateCubeMap(GLAutoDrawable drawable)
+	{
+	    GL2 gl = drawable.getGL().getGL2();
+	    cubeMapFB.beginRendering(gl);
+	    for(int i = 0; i < 6; i++)
+	    {
+		cubeMapFB.drawToFace(gl, i);
+
+		display(drawable);
+	    }
+	    cubeMapFB.endRendering(gl);
+	}
+	
 
 	public void		dispose(GLAutoDrawable drawable)
 	{
@@ -186,8 +280,18 @@ public final class App
 		double cosY = Math.cos(input.yaw);
 		double sinY = Math.sin(input.yaw);
 		GLU.gluLookAt(x, y, z, x + cosP*sinY, y + sinP, z + cosP*cosY, -sinP*sinY, cosP, -sinP*cosY);
+		viewMatrix = Matrix.lookDir(x, y, z, input.pitch, input.yaw);
+		
 
 		gl.glClear(GL.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT);
+		shaderControl.useShader(gl);
+		//Update the uniform variables in our shader scripts while we have the shader bound
+		gl.glUniformMatrix4fv(viewLoc, 1, false, viewMatrix, 0);
+		gl.glUniform1i(cubeMapLoc, 7);
+		gl.glUniform3f(cameraPosLoc, (float)x, (float)y, (float)z);
+
+		shaderControl.dontUseShader(gl);
+		
 		//gl.glEnable(gl.GL_CULL_FACE);
 		//gl.glCullFace(gl.GL_BACK);
 		drawSomething(gl);
@@ -210,6 +314,14 @@ public final class App
 	// http://www.linuxfocus.org/English/January1998/article17.html
 	private void	drawSomething(GL2 gl)
 	{
+	    // This part isn't working properly, so don't draw it.
+	    /*
+		shaderControl.useShader(gl);
+		gl.glBindVertexArray(vao);
+		gl.glBindTexture(gl.GL_TEXTURE_CUBE_MAP, cubeMapFB.getCubeTexture());
+		gl.glDrawArrays(gl.GL_TRIANGLES, 0, 36);
+		shaderControl.dontUseShader(gl);
+	    */
 		//Set the specular reflectiveness of the materials
 		float mat[] = new float[4];
 		mat[0] = 0.626959f;
@@ -385,6 +497,51 @@ public final class App
 
 
 	}
+	private float[] cubeVerts = {
+	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+	 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+	 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+	 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+	-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+
+	-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+	 0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+	 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+	 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+	-0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+
+	-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+	-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+	-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+	-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+	-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+	-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+
+	 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+	 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+	 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+	 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+	 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+	 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+
+	-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+	 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+	 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+	 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+
+	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+	 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+	 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+	 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+	-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
+    };
+	
+	
 
 	// This example on this page is long but helpful:
 	// http://jogamp.org/jogl-demos/src/demos/j2d/FlyingText.java
