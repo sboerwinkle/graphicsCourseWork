@@ -533,15 +533,21 @@ public final class App
 		if (input.mouseDown && selectedThing != items.size() + lights.size()) {
 			if (selectedThing < items.size()) {
 				Item i = items.get(selectedThing);
-				i.pos[0] = (float)(x + Math.sin(input.yaw)*Math.cos(input.pitch)*3);
-				i.pos[1] = (float)(y + Math.sin(input.pitch)*3);
-				i.pos[2] = (float)(z + Math.cos(input.yaw)*Math.cos(input.pitch)*3);
+				grabVector(i.pos);
 			} else {
 				Light l = lights.get(selectedThing - items.size());
-				l.pos[0] = (float)(x + Math.sin(input.yaw)*Math.cos(input.pitch)*3);
-				l.pos[1] = (float)(y + Math.sin(input.pitch)*3);
-				l.pos[2] = (float)(z + Math.cos(input.yaw)*Math.cos(input.pitch)*3);
+				grabVector(l.pos);
 			}
+		}
+
+		//Add items if requested by user
+		if (input.actions[1]) {
+			addItem(new Cube(0, 0, 0, 1, new Color[] {Color.blue, Color.green, Color.red}));
+			input.actions[1] = false;
+		}
+		if (input.actions[2]) {
+			addItem(new Sphere(0, 0, 0, 1, new Color(flashlightColor[0], flashlightColor[1], flashlightColor[2])));
+			input.actions[2] = false;
 		}
 	}
 
@@ -614,6 +620,19 @@ public final class App
 		gl.glVertex3d(x+dx, y, z);
 		gl.glEnd();
 	}
+
+	private void grabVector(float[] pos) {
+		pos[0] = (float)(x + Math.sin(input.yaw)*Math.cos(input.pitch)*3);
+		pos[1] = (float)(y + Math.sin(input.pitch)*3);
+		pos[2] = (float)(z + Math.cos(input.yaw)*Math.cos(input.pitch)*3);
+	}
+
+	private void addItem(Item i) {
+		items.add(i);
+		selectedThing = items.size() - 1;
+		grabVector(i.pos);
+	}
+
 	private float[] cubeVerts = {
 	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
 	 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
