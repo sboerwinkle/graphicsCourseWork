@@ -529,6 +529,19 @@ public final class App
 		if (selectedThing < 0) selectedThing += items.size()+lights.size()+1;
 		input.cumulativeMouseTicks = 0;
 
+		if (input.actions[5]) {
+			input.actions[5] = false;
+			if (selectedThing != items.size() + lights.size()) {
+				if (selectedThing < items.size()) items.remove(selectedThing);
+				else lights.remove(selectedThing-items.size());
+			}
+		}
+
+		if (input.actions[4]) {
+			input.actions[4] = false;
+			selectedThing = items.size() + lights.size();
+		}
+
 		//Move the selected thing to be in front of us
 		if (input.mouseDown && selectedThing != items.size() + lights.size()) {
 			if (selectedThing < items.size()) {
@@ -542,12 +555,16 @@ public final class App
 
 		//Add items if requested by user
 		if (input.actions[1]) {
-			addItem(new Cube(0, 0, 0, 1, new Color[] {Color.blue, Color.green, Color.red}));
 			input.actions[1] = false;
+			addItem(new Cube(0, 0, 0, 1, new Color[] {Color.blue, Color.green, Color.red}));
 		}
 		if (input.actions[2]) {
-			addItem(new Sphere(0, 0, 0, 1, new Color(flashlightColor[0], flashlightColor[1], flashlightColor[2])));
 			input.actions[2] = false;
+			addItem(new Sphere(0, 0, 0, 1, new Color(flashlightColor[0], flashlightColor[1], flashlightColor[2])));
+		}
+		if (input.actions[3]) {
+			input.actions[3] = false;
+			addLight(new Light(0, 0, 0));
 		}
 	}
 
@@ -631,6 +648,12 @@ public final class App
 		items.add(i);
 		selectedThing = items.size() - 1;
 		grabVector(i.pos);
+	}
+
+	private void addLight(Light l) {
+		lights.add(l);
+		selectedThing = items.size() + lights.size() - 1;
+		grabVector(l.pos);
 	}
 
 	private float[] cubeVerts = {

@@ -17,8 +17,8 @@ public class InputHandler implements KeyListener, MouseListener, MouseWheelListe
 		 VK_J, VK_U, VK_K, VK_I, VK_L, VK_O};
 	public double pitch, yaw;
 
-	public boolean[]		actions = new boolean[3];
-	static final int[]		actionCodes = {VK_E, VK_Z, VK_X};
+	public boolean[]		actions = new boolean[6];
+	static final int[]		actionCodes = {VK_E, VK_Z, VK_X, VK_C, VK_ESCAPE, VK_BACK_SPACE};
 
 	public boolean mouseDown = false;
 	public int cumulativeMouseTicks = 0;
