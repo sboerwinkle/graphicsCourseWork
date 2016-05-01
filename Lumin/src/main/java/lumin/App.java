@@ -128,7 +128,7 @@ public final class App
 
 		hazes = new ArrayList<Haze>();	
 		hazes.add(new Haze(new double[]{0, 0, 0}, 2, new Color(.75f, .75f, .75f, .0065f), .080));
-		selectedThing = 0;
+		selectedThing = items.size() + lights.size();
 	}
 
 	//**********************************************************************
@@ -248,8 +248,10 @@ public final class App
 
 		gl.glFogCoordf(0f);			//closer to 1 this is set, the more foggy what is drawn will appear
 
-		File f = new File("C:\\Users\\Rayne\\Google Drive\\Graphics\\graphicsCourseWork\\Lumin\\src\\main\\java\\lumin\\bricks.bmp");
-		File g = new File("C:\\Users\\Rayne\\Google Drive\\Graphics\\graphicsCourseWork\\Lumin\\src\\main\\java\\lumin\\concrete.jpg");
+		//File f = new File("C:\\Users\\Rayne\\Google Drive\\Graphics\\graphicsCourseWork\\Lumin\\src\\main\\java\\lumin\\bricks.bmp");
+		//File g = new File("C:\\Users\\Rayne\\Google Drive\\Graphics\\graphicsCourseWork\\Lumin\\src\\main\\java\\lumin\\concrete.jpg");
+		File f = new File("../../../../src/main/java/lumin/bricks.bmp");
+		File g = new File("../../../../src/main/java/lumin/concrete.jpg");
 		
 		try{bricks = TextureIO.newTexture(f, true);}
 		catch (IOException e){
@@ -443,7 +445,7 @@ public final class App
 		Shadows.cleanup(gl);
 
 		//SELECTION RENDER ================================
-		if (selectedThing != 0) {
+		if (selectedThing != items.size() + lights.size()) {
 			gl.glDisable(gl.GL_DEPTH_TEST);
 			gl.glDisable(gl.GL_LIGHTING);
 			gl.glPointSize(5);
@@ -507,9 +509,15 @@ public final class App
 		}
 
 		//Set the color of the selected light, or our flashlight.
-		float[] lightColor;
-		if (selectedThing < items.size()) lightColor = flashlightColor;
-		else lightColor = lights.get(selectedThing-items.size()).color;
+		float[] lightColor = flashlightColor;
+		if (selectedThing < items.size()) {
+			Item i = items.get(selectedThing);
+			if (i instanceof Sphere) {
+				lightColor = ((Sphere)i).color;
+			}
+		} else if (selectedThing < items.size() + lights.size()) {
+			lightColor = lights.get(selectedThing-items.size()).color;
+		}
 		for (int i = 0; i < 3; i++) {
 			int v = input.getVec(3+i);
 			if (v == 0) continue;
@@ -517,12 +525,12 @@ public final class App
 		}
 
 		//Switch the selected thing
-		selectedThing = (selectedThing + input.cumulativeMouseTicks)%(items.size()+lights.size());
-		if (selectedThing < 0) selectedThing += items.size()+lights.size();
+		selectedThing = (selectedThing + input.cumulativeMouseTicks)%(items.size()+lights.size()+1);
+		if (selectedThing < 0) selectedThing += items.size()+lights.size()+1;
 		input.cumulativeMouseTicks = 0;
 
 		//Move the selected thing to be in front of us
-		if (input.mouseDown && selectedThing != 0) {
+		if (input.mouseDown && selectedThing != items.size() + lights.size()) {
 			if (selectedThing < items.size()) {
 				Item i = items.get(selectedThing);
 				i.pos[0] = (float)(x + Math.sin(input.yaw)*Math.cos(input.pitch)*3);
